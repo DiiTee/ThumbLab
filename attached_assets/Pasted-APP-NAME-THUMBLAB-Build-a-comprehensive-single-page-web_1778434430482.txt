@@ -1,0 +1,337 @@
+APP NAME: THUMBLAB
+
+Build a comprehensive, single-page web app using HTML5.
+
+Core Stack: Tailwind CSS (CDN), Puter.js (AI), Fabric.js (Canvas Editor), Dexie.js (Template Storage), and JSZip (for Bulk Export).
+
+The Architecture:
+Three-Tab Sidebar:
+Tab 1: AI Generator: Input for Video Script or Instructions or Thumbnail Strategy Note (NexLev MCP), Model Toggle (Flux/Gemini), Live edit canvas
+Tab 2: Assets: Uploader for image assets like subjects/characters/props or brand assets.
+Tab 3: Templates: A gallery view of saved thumbnail layouts, also grouped into folders.
+
+It will create Thumbnails in 4 ways: 
+
+1. I paste a Thumbnail Strategy Note from NexLev MCP and the app uses Claude to generate appropriate prompts for the selected image generation model to generate a thumbnail image. 
+2. I upload an asset image and the app uses the selected image generation model to generate a thumbnail image (either using my own prompt or Claude-generated prompt courtesy of NexLev MCP note)
+3. I import a thumbnail image and click Recreate which makes the app  use Claude to generate appropriate prompts for the selected image generation model to generate a thumbnail image. 
+4. Thumbnails created via the above 3 methods can be saved as Templates and used to generate new thumbnails.
+
+Video script may or may not be uploaded/pasted and used by Claude when creating prompts.   Instructions (i.e. base prompt for Claude) may be used instead.
+
+**********************************************************************
+
+THE UI LAYOUT (Sleek Dark Mode)
+
+Left Sidebar (Inputs/Controls):
+
+Upload button or Text area for Video Script or Instructions or Thumbnail Strategy Note (NexLev MCP analysis)
+
+Dropdown for Aspect Ratio (16:9 Video [1280x720], 9:16 Shorts [1080x1920]).
+
+Dropdown for Image Model (Option A: Flux 2 Pro [flux-1.1-pro], Option B: Nano Banana 2 [gemini-3-flash-image]).
+
+Action Button: 'Generate A/B Test Concepts' (includes loading spinner).
+
+Toggles: 'Mobile Preview (320px)' and 'YouTube UI Overlay' (transparent Play Button mockup).
+
+Main Canvas Grid: Two columns labeled 'Variant A' and 'Variant B'.
+
+ Each column must host an interactive Fabric.js Canvas with the correct aspect ratio border.
+
+There should be the Option to turn off Variant B and only generate 1 thumbnail.
+
+Manual Editing Toolbar (Under the Grid):
+Tools: 'Add Text', 'Add Red Arrow', 'Add Circle', 'Drawing Mode', 'Clear Edits'.
+Text Options: Input field for text content, Color Picker, and a 'YouTube Style' button (applies thick black stroke and yellow/white color).
+
+Final Action: A large 'Flatten & Download Both PNGs' button (optimizes for under 2MB).
+
+THE APP LOGIC & WORKFLOW:
+AI Synthesis (The Strategy):
+On generation, use puter.ai.chat() with the 'claude-sonnet-4.6' model.
+Claude must analyze the Script and NexLev notes and output two distinct, highly detailed, high-CTR image prompts (A and B).
+
+AI Render (The Image):
+Call puter.ai.txt2img() using the user-selected Model and Aspect Ratio.
+
+Image Generation:
+If the user selects 'Flux 2 Pro', use puter.ai.txt2img() with the 'flux-1.1-pro' model.
+If the user selects 'Nano Banana 2', use the 'gemini-3-flash-image' model.
+
+The generated image must automatically load as the background image of the respective Fabric.js Canvas.
+
+Live Manual Editing (The Polish):
+When 'Add Text' is clicked, inject an editable Fabric.js Textbox object onto the active canvas. Apply the default YouTube branding style (High-contrast, bold font).
+When 'Add Red Arrow' is clicked, inject a predefined arrow object.
+Allow full manipulation (drag, rotate, resize, delete) of these added objects via mouse/touch.
+
+Export (The Deliverable):
+The final download button must take the Fabric.js Canvas (background + overlays), render it at full resolution, and save it as a PNG optimized for upload size (under 2MB for direct platform upload.)
+
+Styling Notes: Keep the dashboard professional and clean, like a premium SaaS tool. Use rounded corners, distinct hover states, and clear loading animations. Give it a sleek 'Dark Mode' dashboard aesthetic with high-contrast buttons.
+
+
+**********************************************************************
+
+LIVE MANUAL EDITOR using Fabric.js:
+
+When an image is generated (via Flux or Nano Banana), automatically load it into a Fabric.js Canvas instead of a static <img> tag.
+Ensure the canvas strictly maintains the chosen aspect ratio (16:9 or 9:16).
+Manual Editing Tools:
+Text Tool: A button to 'Add Bold Text'. It should default to high-contrast YouTube styles (e.g., Impact font, yellow/white text with a thick black stroke).
+Object Tool: Add a 'Draw' mode and an 'Add Arrow' button (vital for CTR).
+Live Move: Allow me to click and drag any AI-generated element or added text to reposition it.
+The UI:
+Below each A/B result, add a small 'Edit in Canvas' button.
+Add a 'Flatten & Download' button that merges my manual edits with the AI background into a single PNG under 2MB.
+
+
+**********************************************************************
+
+FOR THE 2ND WORKFLOW METHOD: 
+
+Character Anchor: I will upload a transparent PNG or image with solid color background of my character(s)/subject(s). The app must display this on a canvas. It will Remove backgrounds for images with solid color background.
+Contextual Generation: When I click 'Generate', the app must take my 'Video Script' and 'NexLev Strategy' and use Claude Sonnet 4.6 to write a background prompt.
+Non-Destructive Inpainting: Use puter.ai.txt2img() with a Mask.  
+Input: The current canvas (with my character).
+Mask: A silhoutte of my character.
+Instruction: 'Generate a high-CTR YouTube background based on this prompt: [Prompt]. Do NOT change the pixels inside the mask. Blend the lighting of the new background to naturally cast shadows and reflections around the character.'
+Model: Use 'flux-1-fill' or 'gemini-3.1-flash-image' for the best edge-blending.
+UI Features:
+A 'Positioning' mode: Let me drag my character to the left, right, or center before I hit generate.
+A 'Final Polish' toolbar: After generation, let me add my branded text and arrows on top.
+Toggle for 16:9 and 9:16 aspect ratios.
+
+**********************************************************************
+RECREATE FUNCTION
+
+Add a 'Recreate Reference' feature to my Thumbnail Lab.
+The Workflow:
+Reference Upload: Add a button to 'Upload Reference Thumbnail'.
+Vision Analysis: Use puter.ai.chat() with Claude Sonnet 4.6. Pass the uploaded image and use this specific instruction:
+'Analyze this thumbnail. Return a JSON object with: 1) A detailed 200-word prompt for the background scene. 2) The X/Y coordinates and scale for the main character (left, right, or center). 3) The hex codes for the primary colors. 4) The text content and its position.'
+Auto-Setup:
+Use the generated prompt to call puter.ai.txt2img() (Flux) for the background.
+Automatically move the Fabric.js character placeholder and text boxes to the coordinates Claude identified.
+Apply the identified hex codes to the 'Brand Theme' settings.
+The UI:
+Show the 'Reference Image' in a small thumbnail box next to the new 'Draft' so I can compare the composition.
+
+**********************************************************************
+
+TEMPLATES: 
+Save Button: Create a 'Save Current as Template' button. It must serialize the Fabric.js canvas to JSON and save it to an IndexedDB database using Dexie.js.
+The Gallery: In the Templates tab, display a list of saved templates with a 'Load' and 'Delete' button.
+One-Click Swap: When a template is loaded, the app should instantly restore the background, character position, and text boxes. I should then be able to just double-click the text to change it for today's video.
+The Editing Logic:
+Ensure the user can drag their character PNG onto the canvas before generating a background (for Outpainting) or after (for standard compositing).
+Include the 'YouTube UI Overlay' toggle to check for 'dead zones' (where the play button and time stamp appear).
+The Polish:
+Sleek, dark-themed 'Creator Studio' aesthetic.
+Use Puter.js for all AI calls (Sonnet 4.6 for strategy, Flux-Fill for blending).
+Ensure 16:9 and 9:16 aspect ratios are strictly enforced during template saving/loading.
+
+THE TEMPLATE LOGIC:
+Build a 'Spatial Template Engine' for Thumbnails using HTML5, Puter.js, Fabric.js, and Dexie.js.
+The Spatial Template System:
+Role Tagging: Every image added to the canvas must be tagged as a 'Role' (e.g., 'Primary Character', 'Secondary Prop', 'Background').
+The 'Smart Swap' Feature: When I load a template and upload a new file to a specific 'Role' slot:
+The app must replace the old image but copy all transformations (Position, Scale, Rotation, Flip status, and Shadow/Stroke effects).
+It must ensure the new image fits within the 'Bounding Box' of the original template object to keep the composition perfect.
+Global Theme Swapper: Add a 'Color Theme' setting. When I change the 'Primary Color' hex code, it must instantly update the fill/stroke of all text and vector shapes on the canvas that are marked as 'Brand Elements'.
+The Workflow Logic:
+Step 1: Use Claude Sonnet 4.6 (via Puter.js) to generate the initial high-CTR layout based on NexLev data.
+Step 2: Manually adjust the first version to perfection.
+Step 3: Click 'Save as Spatial Template'.
+Step 4 (The Daily Workflow): On days I want to skip the AI, I load the template, hit 'Replace Character', select my new pose, and the app snaps it into the exact position, color-grades it to match, and keeps the text styles identical.
+Technical Requirements:
+Use IndexedDB to store the JSON layout AND the base64 versions of the images so the templates work offline.
+Implement a 'Lock Background' toggle so I don't accidentally move the AI-generated scene while swapping characters.
+Ensure the 'Flatten & Export' button respects the 2MB YouTube limit.
+UI Aesthetic: Premium Dark Mode, 'Node-based' feel, with clear slots for 'Character', 'Prop 1', and 'Background'.
+
+***********************************
+
+Each template contains:
+The Visual Data: The actual background image (stored as a high-quality compressed Base64 string or a local blob URL).
+The Meta Data: The AI prompt that created it (so I can "re-roll" the background later) and the Spatial Map (where everything is sitting).
+
+Make sure the "Save" function includes a "Thumbnail Preview" generator. When I save a template, the app should take a tiny, low-res snapshot of the canvas to use as the icon in my folder view. This makes it much easier to find specific designs at a glance.
+
+Ensure the saveTemplate() function captures the full Fabric.js state, regardless of whether the objects were manually added, AI-generated, or imported via the Recreate tool. Every template should be 'Hot-Swappable'—meaning I can load it and immediately click 'Replace Character' or 'Change Prompt' without breaking the layout.
+
+************************************
+
+FOLDERS & CATEGORIES 
+
+Add a Folder-Based Management System to the Template Library.
+
+The UI Architecture:
+Template Sidebar: Inside the Templates tab, add a left-aligned list of 'Folders'.
+Folder Actions: Buttons to 'Create New Folder', 'Rename', and 'Delete Folder' (with a warning if it contains templates).
+The View: When a folder is selected, only show the templates assigned to that specific category. Add an 'All Templates' view as the default.
+
+The Save Logic:
+Update the 'Save as Template' function to include a 'Folder' dropdown.
+Allow templates to be moved between folders via a 'Change Folder' button on the template card.
+The Niche Integration:
+Allow each folder to have 'Default Metadata'. For example, if I'm in the 'Web3 Animation' folder, the SEO 'Author' should automatically set to 'author name - Animation' and pre-fill relevant niche tags.
+Data Handling:
+Store the folder structure in IndexedDB using Dexie.js. Ensure that when a template is deleted, it is removed from the folder index as well.
+
+**********************************************************************
+
+ADVANCED EDITOR CONTROLS
+
+Undo/Redo System: Implement a history stack for the Fabric.js canvas. Add 'Undo' and 'Redo' buttons that track object additions, movements, and text changes. Support Ctrl+Z and Ctrl+Y.
+Delete Operations:
+Add a 'Trash' icon/button to delete the currently selected object.
+Add a 'Clear All' button to reset the canvas (with a confirmation prompt).
+In the Template Library, add a 'Delete' button for each saved layout.
+Bulk Export Engine:
+The Queue: Add a 'Send to Export Queue' button under each variant (A/B).
+The Factory: Create a drawer that shows small thumbnails of images in the queue.
+The Export: Add a 'Bulk Download (.ZIP)' button. When clicked, use JSZip to bundle all images in the queue into a single file named 'Thumbnails_[Date].zip'.
+The Workflow Logic:
+Step 1: Generate high-CTR backgrounds using Claude Sonnet 4.6 and Flux-Fill based on NexLev strategy.
+Step 2: Use the Spatial Template feature to snap characters/subjects into position.
+Step 3: Perform live edits (add text/arrows). Use Undo/Redo if you make a mistake.
+Step 4: Send successful versions to the 'Bulk Queue'.
+Step 5: Export all versions in one click and upload to YouTube/Student platforms.
+UI/UX: Dark-mode, responsive 'Creator Dashboard' feel. Add keyboard shortcuts for 'Delete' (Backspace) and 'Undo' (Ctrl+Z). Use Dexie.js to ensure the Bulk Queue persists even if I refresh the page.
+
+**********************************************************************
+
+BRANDING
+
+Add a Branding & Settings engine to my 'Thumbnail Lab'.
+The Settings Tab:
+Create a slide-out 'Settings' menu.
+Add fields for Persistent Brand Style:
+Color Palette: Hex codes for primary and secondary brand colors.
+Visual Vibe: A text field (e.g., 'Moody, high-contrast, cinematic' or 'Bright, clean, 2D vector style').
+Font Choice: A dropdown to select a default brand font for the manual editor.
+Add an Asset Uploader:
+Allow me to upload a transparent PNG logo.
+Store this logo in LocalStorage so it persists across sessions.
+The Automation Logic:
+Prompt Injection: When I click 'Generate', the app must silently prepend the 'Visual Vibe' and 'Color Palette' to the prompt sent to Claude Sonnet 4.6.
+Auto-Branding: As soon as an image is generated, the Fabric.js canvas must automatically place my uploaded logo in the bottom-right corner at 15% opacity (watermark style).
+Manual Override: Let me toggle this auto-branding off/on in the sidebar.
+Export Optimization:
+Ensure that when I 'Flatten & Download', the logo and brand-styled text are rendered at the highest quality with the AI background.
+
+**********************************************************************
+
+SEO AUTOMATION
+
+Add an SEO Automation Engine to my Thumbnail Lab.
+Naming Logic:
+When I click 'Download', automatically rename the file based on the 'Video Script' input. Convert the first 5-7 words into a hyphenated, lowercase slug (e.g., 'how-to-trade-solana-memecoins.png').
+Metadata Injection:
+Use a library like exif-js to inject IPTC metadata into the exported PNG/JPG.
+Fields to map:
+'Document Title' = Video Title.
+'Description' = A summary generated by Claude Sonnet 4.6.
+'Author' = (I'll type it in)
+'Keywords' = Top 5 tags from the NexLev data.
+Optimization:
+Ensure the final export is WebP by default (for speed) but has a PNG fallback.
+Automatically compress the file to stay between 1MB and 1.5MB for the best balance of quality and YouTube's 2026 upload limits."
+
+Add a Manual SEO Editor as well.
+The SEO Panel:
+Create a dedicated 'SEO & Metadata' section in the sidebar.
+Editable Fields:
+Filename Slug: A text input that pre-fills with the hyphenated title (e.g., 'solana-strategy-guide').
+Image Alt-Text: A textarea for the internal description (e.g., 'MimiKei holding a Solana coin with an explosion in the background').
+Meta Tags: A comma-separated list of keywords.
+The Injection Logic:
+On 'Export', the app must take the current values from these text fields (not the original AI suggestions) and:
+Rename the file to the 'Filename Slug' value.
+Use exif-js to write the 'Alt-Text' and 'Meta Tags' into the IPTC headers of the PNG/WebP file.
+The Template Link:
+When I 'Save as Template', include these SEO fields in the JSON data. This way, if I reuse a template, my core keywords are already there and ready to be tweaked for the new video.
+User Feedback:
+Add a small 'SEO Ready' green checkmark icon that appears once all metadata fields are filled out.
+
+**********************************************************************
+
+PREVIEW & SAFETY
+Add a 'YouTube Live Preview' system.
+1. The UI Overlay:
+Create a toggle called 'Show YouTube UI'.
+When active, overlay a non-selectable Fabric.js layer that mimics the 2026 YouTube Desktop and Mobile interface.
+It must clearly mark the 'Dead Zones': The bottom-right timestamp box and the top-right hover icons.
+Logic: If an important object (like text or a face) is detected inside a Dead Zone, highlight that object with a red border to warn me.
+2. The Context Preview:
+Add a 'Preview in Feed' button.
+This should open a modal showing the thumbnail at 3 different sizes: Desktop Sidebar, Mobile Feed, and Search Results.
+Place generic 'competitor' thumbnails around it so I can check if my high-contrast 'MimiKei' branding actually stands out.
+3. Mobile 'Squint Test':
+Add a button that instantly shrinks the canvas to 10% size and applies a slight blur. This helps me verify if the 'Hook' is still readable even for someone scrolling fast on a low-end device.
+
+**********************************************************************
+
+SAFETY & PERFORMANCE GUARDRAILS:
+Browser Memory: Ensure it uses requestAnimationFrame for the Fabric.js canvas so the UI stays buttery smooth even with high-res character PNGs.
+Asset Handling: Instruct the code to automatically remove backgrounds from uploaded character photos if you don't have them pre-cut (using a simple secondary AI call if needed).
+Keyboard Shortcuts:
+Ctrl + Z / Ctrl + Y (Undo/Redo)
+Delete / Backspace (Remove selected prop)
+Ctrl + S (Quick-save Spatial Template)
+The "YouTube Safe Zone" Overlay: A semi-transparent layer you can toggle to ensure your text isn't hidden by the "Time Stamp" (bottom right) or "Watch Later" (top right) icons.
+
+
+**********************************************************************
+
+EDITABLE THUMBNAIL STRATEGY NOTE HELPER PROMPT
+
+Goal: Create an editable prompt template Helper for the Thumbnail Strategy Note (NexLev MCP) that saves automatically.
+1. The UI Component:
+In the sidebar, under the text area input section, add a collapsible "Prompt Template (NexLev MCP)" box.
+Inside, place a Text area with a subtle dark background (#1a1f3a) and a "Copy" button.
+The text area should be pre-filled with a default master prompt but remain fully editable.
+2. Dynamic Variable Injection:
+The template must support a placeholder tag: {{TOPIC}}.
+The Logic: When I click the "Copy to Clipboard" button, the app should take the text in the template, replace {{TOPIC}} with whatever is currently typed or uploaded into my Video Script/Title/Instructions field, and copy the final result.
+3. Persistence (Storage):
+Use LocalStorage or Dexie.js to save any edits I make to this template. If I change the prompt to be more specific to my personal branding, it should stay that way even if I refresh the page.
+4. Visual Mockup for the AI:
+Add a "Reset to Default" icon in case I mess up the template.
+Use a cyan glow (#00d4ff) for the border when the textarea is focused.
+
+The Default Template Text (Pre-fill):
+
+"Use NexLev MCP to find 3 thumbnail outliers for: {{TOPIC}}.
+Based on their success, provide:
+NexLev Strategy Highlights: (Hook, Anchor, Palette).
+Image Prompt A: (Detailed, cinematic 16:9 for Flux or Nano Banana).
+Image Prompt B: (High-contrast, aggressive 16:9 for Flux or Nano Banana).
+Format the response so I can paste it directly into my app's text area."
+
+**********************************************************************
+
+APP COLOR SCHEME: 
+Dark sleek dashboard theme with neon accents.
+Primary Backgrounds
+Main background: #0a0e27
+Card background: #131837
+Input/inner background: #1a1f3a
+Accent Colors
+Primary accent (cyan): #00d4ff
+Secondary accent (green): #00ff88
+Text Colors
+Primary text: #e8eaf6
+Secondary text: #9fa8da
+Muted text: #5c6bc0
+Borders
+Border color: #283593
+Glow Effect
+Glow: rgba(0,212,255,0.3)
+Gradient Used
+linear-gradient(135deg, #00d4ff, #00ff88)
+Style
+Dark sleek dashboard
+Neon accents
