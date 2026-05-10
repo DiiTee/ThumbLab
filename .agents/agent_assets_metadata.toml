@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "vDm2FLFjDQRHfnuu8MBuC"
+uri = "file://thumblab-local.zip"
+type = "unspecified"
+title = "THUMBLAB — Local Build"
