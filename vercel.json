@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm --filter @workspace/thumblab run build",
-  "outputDirectory": "artifacts/thumblab/dist/public",
+  "outputDirectory": "artifacts/thumblab/dist",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
   "rewrites": [
