@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { Zap, Upload, RefreshCw, Eye, Smartphone, Youtube, SplitSquareVertical, Monitor } from "lucide-react";
+import { useRef, useState } from "react";
+import { Zap, Upload, RefreshCw, Eye, Smartphone, Youtube, SplitSquareVertical, Monitor, Sparkles, ChevronLeft, Image } from "lucide-react";
 import { useStore } from "../store/useStore";
 import { ASPECT_RATIOS, IMAGE_MODELS, PROMPT_MODELS } from "../types";
 import type { AspectRatio, ImageModel, PromptModel } from "../types";
@@ -10,38 +10,65 @@ interface Props {
   onImagesGenerated: (imgA: string, promptA: string, imgB: string | null, promptB: string | null) => void;
 }
 
+type Step = "idle" | "generating-prompts" | "prompts-ready" | "generating-images";
+
 export default function AITab({ onImagesGenerated }: Props) {
   const { state, dispatch } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const refFileRef = useRef<HTMLInputElement>(null);
 
-  const handleGenerate = async () => {
-    if (state.isGenerating) return;
-    if (!window.puter) {
-      alert("Puter.js is not loaded. Please refresh and try again.");
-      return;
-    }
+  const [step, setStep] = useState<Step>("idle");
+  const [editablePromptA, setEditablePromptA] = useState("");
+  const [editablePromptB, setEditablePromptB] = useState("");
+
+  const isWorking = step === "generating-prompts" || step === "generating-images";
+
+  // Step 1: Generate prompts only
+  const handleGeneratePrompts = async () => {
+    if (isWorking) return;
+    if (!window.puter) { alert("Puter.js is not loaded. Please refresh."); return; }
+    setStep("generating-prompts");
     dispatch({ type: "SET_GENERATING", value: true });
     try {
       const { primaryColor, secondaryColor, visualVibe } = state.brandSettings;
-      const brandColors = `${primaryColor}, ${secondaryColor}`;
       const { promptA, promptB } = await generatePrompts(
         state.scriptText,
         state.scriptText,
         visualVibe,
-        brandColors,
+        `${primaryColor}, ${secondaryColor}`,
         state.aspectRatio,
         state.promptModel
       );
-      const { width, height } = ASPECT_RATIOS[state.aspectRatio];
-      const [imgA, imgB] = await Promise.all([
-        generateImage(promptA, state.imageModel, width, height),
-        state.showVariantB ? generateImage(promptB, state.imageModel, width, height) : Promise.resolve(null),
-      ]);
-      onImagesGenerated(imgA, promptA, imgB, state.showVariantB ? promptB : null);
+      setEditablePromptA(promptA);
+      setEditablePromptB(promptB);
+      setStep("prompts-ready");
     } catch (err) {
       console.error(err);
-      alert(`Generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`Prompt generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      setStep("idle");
+    } finally {
+      dispatch({ type: "SET_GENERATING", value: false });
+    }
+  };
+
+  // Step 2: Generate images from (possibly edited) prompts
+  const handleGenerateImages = async () => {
+    if (isWorking) return;
+    if (!window.puter) { alert("Puter.js is not loaded. Please refresh."); return; }
+    setStep("generating-images");
+    dispatch({ type: "SET_GENERATING", value: true });
+    try {
+      const { width, height } = ASPECT_RATIOS[state.aspectRatio];
+      const [imgA, imgB] = await Promise.all([
+        generateImage(editablePromptA, state.imageModel, width, height),
+        state.showVariantB ? generateImage(editablePromptB, state.imageModel, width, height) : Promise.resolve(null),
+      ]);
+      onImagesGenerated(imgA, editablePromptA, imgB, state.showVariantB ? editablePromptB : null);
+      setStep("idle");
+    } catch (err) {
+      console.error(err);
+      alert(`Image generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      setStep("prompts-ready");
     } finally {
       dispatch({ type: "SET_GENERATING", value: false });
     }
@@ -63,15 +90,18 @@ export default function AITab({ onImagesGenerated }: Props) {
       const b64 = ev.target?.result as string;
       dispatch({ type: "SET_REFERENCE_IMAGE", image: b64 });
       if (!window.puter) { alert("Puter.js not loaded"); return; }
+      setStep("generating-images");
       dispatch({ type: "SET_GENERATING", value: true });
       try {
         const analysis = await analyzeReferenceImage(b64);
         const { width, height } = ASPECT_RATIOS[state.aspectRatio];
         const img = await generateImage(analysis.backgroundPrompt, state.imageModel, width, height);
         onImagesGenerated(img, analysis.backgroundPrompt, null, null);
+        setStep("idle");
         alert(`Reference analyzed!\nCharacter position: ${analysis.characterPosition?.alignment || "center"}\nColors: ${analysis.colors?.join(", ")}`);
       } catch (err) {
         alert(`Recreate failed: ${err instanceof Error ? err.message : String(err)}`);
+        setStep("idle");
       } finally {
         dispatch({ type: "SET_GENERATING", value: false });
       }
@@ -146,15 +176,9 @@ export default function AITab({ onImagesGenerated }: Props) {
           </select>
         </div>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <div
-            style={{
-              fontSize: 10, color: "var(--text-muted)", lineHeight: 1.4,
-              padding: "4px 6px", background: "var(--bg-input)", borderRadius: 6,
-              border: "1px solid var(--border-color)",
-            }}
-          >
+          <div style={{ fontSize: 10, color: "var(--text-muted)", lineHeight: 1.4, padding: "4px 6px", background: "var(--bg-input)", borderRadius: 6, border: "1px solid var(--border-color)" }}>
             {state.imageModel === "dall-e-3"
-              ? "✦ DALL·E 3 has best text accuracy for thumbnails"
+              ? "✦ DALL·E 3 has best text accuracy"
               : state.imageModel === "gemini-2.0-flash-exp-image-generation"
               ? "✦ Nano Banana: fast & creative, weaker text"
               : "✦ FLUX Schnell: very fast, good composition"}
@@ -189,7 +213,7 @@ export default function AITab({ onImagesGenerated }: Props) {
           <button
             className="btn-secondary px-3 py-2 text-xs flex items-center gap-2 flex-1"
             onClick={() => refFileRef.current?.click()}
-            disabled={state.isGenerating}
+            disabled={isWorking}
           >
             <RefreshCw size={12} />
             {state.referenceImage ? "Upload New Reference" : "Upload Reference Thumbnail"}
@@ -212,33 +236,93 @@ export default function AITab({ onImagesGenerated }: Props) {
         ))}
       </div>
 
-      {/* Preview in Feed */}
-      <button
-        className="btn-secondary px-3 py-2 text-xs flex items-center justify-center gap-2"
-        onClick={() => dispatch({ type: "SET_TAB" as any, tab: "ai" })}
-      >
-        <Eye size={12} /> Preview in YouTube Feed
-      </button>
+      {/* ── PROMPT PREVIEW & EDIT (appears after step 1) ── */}
+      {(step === "prompts-ready" || step === "generating-images") && (
+        <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex items-center justify-between">
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent-cyan)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              ✦ Review & Edit Prompts
+            </span>
+            <button
+              className="btn-secondary px-2 py-1 flex items-center gap-1"
+              style={{ fontSize: 11 }}
+              onClick={() => { setStep("idle"); setEditablePromptA(""); setEditablePromptB(""); }}
+              disabled={step === "generating-images"}
+            >
+              <ChevronLeft size={11} /> Start Over
+            </button>
+          </div>
 
-      {/* Generate Button — sticky so it's always visible */}
-      <button
-        className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2 sticky bottom-0"
-        style={{ fontSize: 14, letterSpacing: "0.04em", zIndex: 10, marginTop: 8 }}
-        onClick={handleGenerate}
-        disabled={state.isGenerating}
-      >
-        {state.isGenerating ? (
-          <>
-            <span className="spinner" />
-            Generating with {promptModelLabel.split(" [")[0]} + {imageModelLabel.split(" [")[0]}...
-          </>
-        ) : (
-          <>
-            <Zap size={16} />
-            Generate A/B Test Concepts
-          </>
+          <div>
+            <label className="section-label" style={{ color: "var(--accent-cyan)" }}>Variant A Prompt</label>
+            <textarea
+              value={editablePromptA}
+              onChange={e => setEditablePromptA(e.target.value)}
+              className="w-full p-3 text-sm resize-y"
+              style={{ minHeight: 90, fontSize: 12, lineHeight: 1.5 }}
+              disabled={step === "generating-images"}
+            />
+          </div>
+
+          {state.showVariantB && (
+            <div>
+              <label className="section-label" style={{ color: "var(--accent-green)" }}>Variant B Prompt</label>
+              <textarea
+                value={editablePromptB}
+                onChange={e => setEditablePromptB(e.target.value)}
+                className="w-full p-3 text-sm resize-y"
+                style={{ minHeight: 90, fontSize: 12, lineHeight: 1.5 }}
+                disabled={step === "generating-images"}
+              />
+            </div>
+          )}
+
+          {/* Regenerate prompts inline */}
+          <button
+            className="btn-secondary px-3 py-2 text-xs flex items-center justify-center gap-2"
+            onClick={handleGeneratePrompts}
+            disabled={isWorking}
+          >
+            <Sparkles size={12} /> Regenerate Prompts
+          </button>
+        </div>
+      )}
+
+      {/* ── BOTTOM BUTTONS ── */}
+      <div className="sticky bottom-0 flex flex-col gap-2" style={{ zIndex: 10, paddingTop: 4, background: "var(--bg-sidebar)" }}>
+
+        {/* Step 1: Generate prompts */}
+        {(step === "idle" || step === "generating-prompts") && (
+          <button
+            className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+            style={{ fontSize: 14, letterSpacing: "0.04em" }}
+            onClick={handleGeneratePrompts}
+            disabled={step === "generating-prompts"}
+          >
+            {step === "generating-prompts" ? (
+              <><span className="spinner" /> Writing prompts with {promptModelLabel.split(" [")[0]}...</>
+            ) : (
+              <><Sparkles size={16} /> Generate Prompts</>
+            )}
+          </button>
         )}
-      </button>
+
+        {/* Step 2: Generate images (shown after prompts are ready) */}
+        {(step === "prompts-ready" || step === "generating-images") && (
+          <button
+            className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+            style={{ fontSize: 14, letterSpacing: "0.04em", background: step === "generating-images" ? undefined : "linear-gradient(135deg, #00d4ff22, #00ff8822), var(--accent-green)" }}
+            onClick={handleGenerateImages}
+            disabled={step === "generating-images"}
+          >
+            {step === "generating-images" ? (
+              <><span className="spinner" /> Generating with {imageModelLabel.split(" [")[0]}...</>
+            ) : (
+              <><Image size={16} /> Generate Thumbnails</>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
