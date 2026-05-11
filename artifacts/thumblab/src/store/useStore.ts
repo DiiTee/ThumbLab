@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, Dispatch } from "react";
 import type {
-  AppState, SidebarTab, CanvasVariant, AspectRatio, ImageModel,
+  AppState, SidebarTab, CanvasVariant, AspectRatio, ImageModel, PromptModel,
   BrandSettings, SEOData, ExportQueueItem, CanvasState
 } from "../types";
 import { DEFAULT_BRAND, DEFAULT_SEO, DEFAULT_CANVAS, DEFAULT_NEXLEV_TEMPLATE } from "../types";
@@ -14,6 +14,7 @@ export const initialState: AppState = {
   activeVariant: "A",
   aspectRatio: "16:9",
   imageModel: "dall-e-3",
+  promptModel: "claude-3-5-sonnet" as PromptModel,
   scriptText: "",
   showVariantB: true,
   mobilePreview: false,
@@ -33,6 +34,7 @@ export type Action =
   | { type: "SET_ACTIVE_VARIANT"; variant: CanvasVariant }
   | { type: "SET_ASPECT_RATIO"; ratio: AspectRatio }
   | { type: "SET_IMAGE_MODEL"; model: ImageModel }
+  | { type: "SET_PROMPT_MODEL"; model: PromptModel }
   | { type: "SET_SCRIPT"; text: string }
   | { type: "TOGGLE_VARIANT_B" }
   | { type: "TOGGLE_MOBILE_PREVIEW" }
@@ -57,6 +59,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_ACTIVE_VARIANT": return { ...state, activeVariant: action.variant };
     case "SET_ASPECT_RATIO": return { ...state, aspectRatio: action.ratio };
     case "SET_IMAGE_MODEL": return { ...state, imageModel: action.model };
+    case "SET_PROMPT_MODEL": return { ...state, promptModel: action.model };
     case "SET_SCRIPT": return { ...state, scriptText: action.text };
     case "TOGGLE_VARIANT_B": return { ...state, showVariantB: !state.showVariantB };
     case "TOGGLE_MOBILE_PREVIEW": return { ...state, mobilePreview: !state.mobilePreview };

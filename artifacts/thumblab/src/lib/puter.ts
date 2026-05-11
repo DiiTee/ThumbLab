@@ -92,7 +92,8 @@ export async function generatePrompts(
   nexlevNotes: string,
   brandVibe: string,
   brandColors: string,
-  aspectRatio: string
+  aspectRatio: string,
+  promptModel = "claude-3-5-sonnet"
 ): Promise<{ promptA: string; promptB: string }> {
   const systemPrompt = `You are a YouTube thumbnail expert with deep knowledge of high-CTR design.
 You create compelling image prompts that maximize click-through rates.
@@ -118,10 +119,10 @@ Return ONLY this JSON (no markdown, no preamble):
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      { model: "claude-3-5-sonnet" }
+      { model: promptModel }
     ),
     60000,
-    "Claude prompt generation"
+    `${promptModel} prompt generation`
   );
 
   const text = extractText(response);
@@ -202,11 +203,11 @@ Focus on environment, lighting, atmosphere, and colors. 200+ words. Return only 
   return extractText(response);
 }
 
-export async function generateSummaryForSEO(script: string): Promise<string> {
+export async function generateSummaryForSEO(script: string, promptModel = "claude-3-5-sonnet"): Promise<string> {
   const response = await withTimeout(
     window.puter.ai.chat(
       `Write a 1-2 sentence description for a YouTube video titled/about: "${script}". Return only the description.`,
-      { model: "claude-3-5-sonnet" }
+      { model: promptModel }
     ),
     60000,
     "SEO summary generation"

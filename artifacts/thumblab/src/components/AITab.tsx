@@ -1,8 +1,8 @@
 import { useRef } from "react";
 import { Zap, Upload, RefreshCw, Eye, Smartphone, Youtube, SplitSquareVertical, Monitor } from "lucide-react";
 import { useStore } from "../store/useStore";
-import { ASPECT_RATIOS, IMAGE_MODELS } from "../types";
-import type { AspectRatio, ImageModel } from "../types";
+import { ASPECT_RATIOS, IMAGE_MODELS, PROMPT_MODELS } from "../types";
+import type { AspectRatio, ImageModel, PromptModel } from "../types";
 import { generatePrompts, generateImage, analyzeReferenceImage } from "../lib/puter";
 import NexLevHelper from "./NexLevHelper";
 
@@ -30,7 +30,8 @@ export default function AITab({ onImagesGenerated }: Props) {
         state.scriptText,
         visualVibe,
         brandColors,
-        state.aspectRatio
+        state.aspectRatio,
+        state.promptModel
       );
       const { width, height } = ASPECT_RATIOS[state.aspectRatio];
       const [imgA, imgB] = await Promise.all([
@@ -81,16 +82,17 @@ export default function AITab({ onImagesGenerated }: Props) {
   const seoReady = (canvas: typeof state.canvasA) =>
     canvas.seoData.filenameSlug && canvas.seoData.altText && canvas.seoData.metaTags;
 
+  const imageModelLabel = IMAGE_MODELS[state.imageModel];
+  const promptModelLabel = PROMPT_MODELS[state.promptModel];
+
   return (
     <div className="flex flex-col gap-3 overflow-y-auto flex-1 pr-1">
+
       {/* Script / Strategy Input */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <span className="section-label">Script / Strategy / NexLev Note</span>
-          <button
-            className="btn-secondary px-2 py-1 text-xs flex items-center gap-1"
-            onClick={() => fileRef.current?.click()}
-          >
+          <button className="btn-secondary px-2 py-1 text-xs flex items-center gap-1" onClick={() => fileRef.current?.click()}>
             <Upload size={11} /> Upload
           </button>
           <input ref={fileRef} type="file" accept=".txt,.md" className="hidden" onChange={handleScriptUpload} />
@@ -105,7 +107,7 @@ export default function AITab({ onImagesGenerated }: Props) {
         <NexLevHelper scriptText={state.scriptText} />
       </div>
 
-      {/* Controls */}
+      {/* Model selectors — 2×2 grid */}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="section-label">Aspect Ratio</label>
@@ -130,6 +132,33 @@ export default function AITab({ onImagesGenerated }: Props) {
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="section-label">Prompt Model</label>
+          <select
+            value={state.promptModel}
+            onChange={e => dispatch({ type: "SET_PROMPT_MODEL", model: e.target.value as PromptModel })}
+            className="w-full px-3 py-2 text-sm"
+          >
+            {Object.entries(PROMPT_MODELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div
+            style={{
+              fontSize: 10, color: "var(--text-muted)", lineHeight: 1.4,
+              padding: "4px 6px", background: "var(--bg-input)", borderRadius: 6,
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            {state.imageModel === "dall-e-3"
+              ? "✦ DALL·E 3 has best text accuracy for thumbnails"
+              : state.imageModel === "gemini-2.0-flash-exp-image-generation"
+              ? "✦ Nano Banana: fast & creative, weaker text"
+              : "✦ FLUX Schnell: very fast, good composition"}
+          </div>
         </div>
       </div>
 
@@ -175,7 +204,7 @@ export default function AITab({ onImagesGenerated }: Props) {
       </div>
 
       {/* SEO Status */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {[state.canvasA, state.canvasB].filter((_, i) => i === 0 || state.showVariantB).map((canvas, i) => (
           seoReady(canvas) ? (
             <span key={i} className="seo-badge">✓ Variant {i === 0 ? "A" : "B"} SEO Ready</span>
@@ -183,7 +212,7 @@ export default function AITab({ onImagesGenerated }: Props) {
         ))}
       </div>
 
-      {/* Preview in Feed button */}
+      {/* Preview in Feed */}
       <button
         className="btn-secondary px-3 py-2 text-xs flex items-center justify-center gap-2"
         onClick={() => dispatch({ type: "SET_TAB" as any, tab: "ai" })}
@@ -201,7 +230,7 @@ export default function AITab({ onImagesGenerated }: Props) {
         {state.isGenerating ? (
           <>
             <span className="spinner" />
-            Generating with Claude + {IMAGE_MODELS[state.imageModel].split("[")[0].trim()}...
+            Generating with {promptModelLabel.split(" [")[0]} + {imageModelLabel.split(" [")[0]}...
           </>
         ) : (
           <>
