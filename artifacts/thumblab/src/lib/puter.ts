@@ -76,15 +76,33 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 function extractText(response: any): string {
+  // Puter returns false when not signed in or out of credits
+  if (response === false || response == null) return "";
   if (typeof response === "string") return response;
-  // Puter v2 shape: { message: { content: [{ text: "..." }] } }
-  if (response?.message?.content) {
-    const content = response.message.content;
-    if (Array.isArray(content)) return content.map((c: any) => c.text || "").join("");
-    if (typeof content === "string") return content;
+
+  // Puter v2: { message: { content: [{text}] | string } }
+  if (response?.message?.content != null) {
+    const c = response.message.content;
+    if (Array.isArray(c)) return c.map((x: any) => x?.text ?? x ?? "").join("");
+    if (typeof c === "string") return c;
   }
-  // Fallback
-  return response?.toString?.() ?? "";
+
+  // message itself is a string
+  if (typeof response?.message === "string") return response.message;
+
+  // OpenAI style: { choices: [{ message: { content } }] }
+  const oai = response?.choices?.[0]?.message?.content;
+  if (typeof oai === "string") return oai;
+
+  // Direct content / text field
+  if (typeof response?.content === "string") return response.content;
+  if (Array.isArray(response?.content)) {
+    return response.content.map((x: any) => x?.text ?? "").join("");
+  }
+  if (typeof response?.text === "string") return response.text;
+
+  // Last-resort: dump the full object so the error message is actually useful
+  try { return JSON.stringify(response); } catch { return String(response); }
 }
 
 export async function generatePrompts(
@@ -125,12 +143,30 @@ Return ONLY this JSON (no markdown, no preamble):
     `${promptModel} prompt generation`
   );
 
+  console.log("[THUMBLAB] raw puter response type:", typeof response, response === false ? "FALSE (auth/credit error)" : "");
+  console.log("[THUMBLAB] raw puter response:", JSON.stringify(response)?.slice(0, 500));
+  if (response === false) {
+    throw new Error("Puter returned false — make sure you are signed in to Puter and have AI credits available.");
+  }
   const text = extractText(response);
+  console.log("[THUMBLAB] extracted text:", text.slice(0, 300));
+
   const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`Failed to parse AI response. Got: ${text.slice(0, 200)}`);
-  const parsed = JSON.parse(jsonMatch[0]);
-  if (!parsed.promptA || !parsed.promptB) throw new Error("AI returned incomplete prompts");
-  return { promptA: parsed.promptA, promptB: parsed.promptB };
+  if (!jsonMatch) {
+    // If it's not JSON, treat the whole text as a single prompt for both variants
+    // (graceful degradation — better than a hard error)
+    if (text.trim().length > 20) {
+      return { promptA: text.trim(), promptB: text.trim() };
+    }
+    throw new Error(`Failed to parse AI response. Got: ${text.slice(0, 400) || "(empty — check browser console for raw response)"}`);
+  }
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.promptA || !parsed.promptB) throw new Error("AI returned incomplete prompts");
+    return { promptA: parsed.promptA, promptB: parsed.promptB };
+  } catch (e) {
+    throw new Error(`JSON parse failed. Raw: ${jsonMatch[0].slice(0, 300)}`);
+  }
 }
 
 export async function generateImage(
