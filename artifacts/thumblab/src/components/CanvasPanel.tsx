@@ -162,9 +162,9 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
             (logo as any)["data-role"] = "logo";
             canvas.add(logo);
             canvas.renderAll();
-          }, { crossOrigin: "anonymous" });
+          });
         }
-      }, { crossOrigin: "anonymous" });
+      });
     }, [backgroundImage, autoBranding, logoBase64, getDisplaySize]);
 
     useImperativeHandle(ref, () => ({
@@ -294,7 +294,7 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
           canvas.insertAt(img, 0, false);
           canvas.renderAll();
           onDone?.();
-        }, { crossOrigin: "anonymous" });
+        });
       },
       async getDataURL(width, height) {
         const canvas = fabricRef.current;
@@ -316,7 +316,7 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
           canvas.add(img);
           canvas.setActiveObject(img);
           canvas.renderAll();
-        }, { crossOrigin: "anonymous" });
+        });
       },
     }), [getDisplaySize, pushHistory]);
 
