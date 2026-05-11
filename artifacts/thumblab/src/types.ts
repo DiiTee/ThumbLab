@@ -1,6 +1,6 @@
 export type AspectRatio = "16:9" | "9:16";
-export type ImageModel = "dall-e-3" | "flux-schnell" | "gemini-2.0-flash-exp-image-generation";
-export type PromptModel = "claude-3-5-sonnet" | "gemini-1.5-flash";
+export type ImageModel = "dall-e-3" | "gpt-image-1" | "black-forest-labs/flux-schnell" | "gemini-2.5-flash-image-preview";
+export type PromptModel = "claude-sonnet-4-5" | "claude-haiku-4-5" | "gemini-2.0-flash" | "gemini-2.5-flash";
 export type SidebarTab = "ai" | "assets" | "templates";
 export type CanvasVariant = "A" | "B";
 export type ObjectRole = "background" | "character" | "prop" | "text" | "shape" | "logo";
@@ -101,18 +101,23 @@ export const ASPECT_RATIOS: Record<AspectRatio, { width: number; height: number;
 
 export const IMAGE_MODELS: Record<ImageModel, string> = {
   "dall-e-3": "DALL·E 3 [best text]",
-  "flux-schnell": "FLUX Schnell [fast]",
-  "gemini-2.0-flash-exp-image-generation": "Nano Banana [Gemini]",
+  "gpt-image-1": "GPT Image 1 [OpenAI]",
+  "black-forest-labs/flux-schnell": "FLUX Schnell [fast]",
+  "gemini-2.5-flash-image-preview": "Nano Banana [Gemini]",
 };
 
 export const PROMPT_MODELS: Record<PromptModel, string> = {
-  "claude-3-5-sonnet": "Claude 3.5 Sonnet",
-  "gemini-1.5-flash": "Gemini 1.5 Flash [cheap]",
+  "claude-sonnet-4-5": "Claude Sonnet 4.5",
+  "claude-haiku-4-5": "Claude Haiku 4.5 [fast]",
+  "gemini-2.0-flash": "Gemini 2.0 Flash [cheap]",
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
 };
 
 export const SEO_MODELS: Record<PromptModel, string> = {
-  "claude-3-5-sonnet": "Claude 3.5 Sonnet",
-  "gemini-1.5-flash": "Gemini 1.5 Flash [cheap]",
+  "claude-sonnet-4-5": "Claude Sonnet 4.5",
+  "claude-haiku-4-5": "Claude Haiku 4.5 [fast]",
+  "gemini-2.0-flash": "Gemini 2.0 Flash [cheap]",
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
 };
 
 export const DEFAULT_NEXLEV_TEMPLATE = `Use NexLev MCP to find 3 thumbnail outliers for: {{TOPIC}}.

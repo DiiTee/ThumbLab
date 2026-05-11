@@ -111,7 +111,7 @@ export async function generatePrompts(
   brandVibe: string,
   brandColors: string,
   aspectRatio: string,
-  promptModel = "claude-3-5-sonnet"
+  promptModel = "claude-sonnet-4-5"
 ): Promise<{ promptA: string; promptB: string }> {
   const systemPrompt = `You are a YouTube thumbnail expert with deep knowledge of high-CTR design.
 You create compelling image prompts that maximize click-through rates.
@@ -209,7 +209,7 @@ Return ONLY valid JSON, no markdown.`,
         },
       ],
     },
-  ], { model: "claude-3-5-sonnet" });
+  ], { model: "claude-sonnet-4-5" });
 
   const text = extractText(response);
   const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -232,14 +232,14 @@ The background should complement the subject/character that will be placed on to
 Focus on environment, lighting, atmosphere, and colors. 200+ words. Return only the prompt text.`;
 
   const response = await withTimeout(
-    window.puter.ai.chat(prompt, { model: "claude-3-5-sonnet" }),
+    window.puter.ai.chat(prompt, { model: "claude-sonnet-4-5" }),
     60000,
     "Asset prompt generation"
   );
   return extractText(response);
 }
 
-export async function generateSummaryForSEO(script: string, promptModel = "claude-3-5-sonnet"): Promise<string> {
+export async function generateSummaryForSEO(script: string, promptModel = "claude-sonnet-4-5"): Promise<string> {
   const response = await withTimeout(
     window.puter.ai.chat(
       `Write a 1-2 sentence description for a YouTube video titled/about: "${script}". Return only the description.`,
