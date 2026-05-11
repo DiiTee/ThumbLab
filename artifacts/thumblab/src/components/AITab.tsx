@@ -191,10 +191,10 @@ export default function AITab({ onImagesGenerated }: Props) {
         <Eye size={12} /> Preview in YouTube Feed
       </button>
 
-      {/* Generate Button */}
+      {/* Generate Button — sticky so it's always visible */}
       <button
-        className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2 mt-auto"
-        style={{ fontSize: 14, letterSpacing: "0.04em" }}
+        className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2 sticky bottom-0"
+        style={{ fontSize: 14, letterSpacing: "0.04em", zIndex: 10, marginTop: 8 }}
         onClick={handleGenerate}
         disabled={state.isGenerating}
       >

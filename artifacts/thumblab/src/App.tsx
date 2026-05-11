@@ -11,7 +11,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import SEOPanel from "./components/SEOPanel";
 import BulkExportDrawer from "./components/BulkExportDrawer";
 import { saveTemplate, getQueueItems, saveQueueItem } from "./lib/db";
-import { Layers, Settings, Package, Download, FlipHorizontal2, Cpu, FolderOpen } from "lucide-react";
+import { Layers, Settings, Package, Download, FlipHorizontal2, Cpu, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
 
 const TABS = [
   { id: "ai", label: "AI Studio", icon: <Cpu size={14} /> },
@@ -24,18 +24,17 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDrawerOpen, setExportDrawerOpen] = useState(false);
   const [activeEditVariant, setActiveEditVariant] = useState<CanvasVariant>("A");
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(true);
 
   const canvasARef = useRef<CanvasPanelRef>(null);
   const canvasBRef = useRef<CanvasPanelRef>(null);
 
   const getActiveRef = (v: CanvasVariant = activeEditVariant) => v === "A" ? canvasARef : canvasBRef;
 
-  // Load export queue from DB on start
   useEffect(() => {
     getQueueItems().then(items => dispatch({ type: "SET_EXPORT_QUEUE", items }));
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -51,12 +50,13 @@ export default function App() {
   const handleImagesGenerated = useCallback((imgA: string, promptA: string, imgB: string | null, promptB: string | null) => {
     dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: imgA, prompt: promptA });
     if (imgB) dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: imgB, prompt: promptB || "" });
-    // Auto-SEO slug
     if (state.scriptText) {
       const slug = state.scriptText.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").split(" ").slice(0, 6).join("-");
       dispatch({ type: "UPDATE_CANVAS_SEO", variant: "A", seo: { filenameSlug: `${slug}-a`, videoTitle: state.scriptText.split("\n")[0].slice(0, 100) } });
       if (imgB) dispatch({ type: "UPDATE_CANVAS_SEO", variant: "B", seo: { filenameSlug: `${slug}-b`, videoTitle: state.scriptText.split("\n")[0].slice(0, 100) } });
     }
+    // Auto-collapse panel on mobile after generation starts
+    setMobilePanelOpen(false);
   }, [state.scriptText]);
 
   const handleSaveTemplate = useCallback(async (folderId: string | null, name?: string) => {
@@ -107,7 +107,7 @@ export default function App() {
       a.href = dataUrl;
       a.download = `${slug}.png`;
       a.click();
-    } catch (e) {
+    } catch {
       alert("Download failed. Make sure an image is loaded on the canvas.");
     }
   }, [state.canvasA, state.canvasB, state.aspectRatio]);
@@ -130,7 +130,7 @@ export default function App() {
       await saveQueueItem(item);
       dispatch({ type: "ADD_TO_QUEUE", item });
       setExportDrawerOpen(true);
-    } catch (e) {
+    } catch {
       alert("Failed to add to queue. Make sure an image is loaded.");
     }
   }, [state.canvasA, state.canvasB, state.aspectRatio]);
@@ -145,110 +145,151 @@ export default function App() {
 
   const { width: nW, height: nH } = ASPECT_RATIOS[state.aspectRatio];
 
+  const sidebarContent = (
+    <>
+      {/* Tabs */}
+      <div style={{ display: "flex", padding: "8px 8px 0", gap: 4, borderBottom: "1px solid var(--border-color)", paddingBottom: 8, flexShrink: 0 }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            className={`tab-btn flex-1 flex items-center justify-center gap-1.5 ${state.sidebarTab === tab.id ? "active" : ""}`}
+            style={{ fontSize: 12 }}
+            onClick={() => dispatch({ type: "SET_TAB", tab: tab.id })}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden flex flex-col p-3" style={{ minHeight: 0 }}>
+        {state.sidebarTab === "ai" && !settingsOpen && (
+          <AITab onImagesGenerated={handleImagesGenerated} />
+        )}
+        {state.sidebarTab === "assets" && !settingsOpen && (
+          <AssetsTab onUseAsset={handleUseAsset} />
+        )}
+        {state.sidebarTab === "templates" && !settingsOpen && (
+          <TemplatesTab
+            onLoadTemplate={handleLoadTemplate}
+            onSaveTemplate={(folderId) => handleSaveTemplate(folderId)}
+          />
+        )}
+        {settingsOpen && <SettingsPanel />}
+      </div>
+    </>
+  );
+
   return (
     <StoreContext.Provider value={{ state, dispatch }}>
       <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--bg-main)" }}>
-        {/* Top Bar */}
+
+        {/* ── Header ── */}
         <header style={{
           background: "var(--bg-card)",
           borderBottom: "1px solid var(--border-color)",
-          padding: "0 16px",
+          padding: "0 12px",
           height: 48,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexShrink: 0,
           zIndex: 100,
+          gap: 8,
         }}>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div style={{ width: 28, height: 28, background: "var(--gradient)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <FlipHorizontal2 size={16} style={{ color: "#0a0e27" }} />
-              </div>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em" }} className="gradient-text">
-                THUMBLAB
-              </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <div style={{ width: 28, height: 28, background: "var(--gradient)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <FlipHorizontal2 size={16} style={{ color: "#0a0e27" }} />
             </div>
-            <span style={{ fontSize: 11, color: "var(--text-muted)", background: "var(--bg-input)", padding: "2px 8px", borderRadius: 20, border: "1px solid var(--border-color)" }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em" }} className="gradient-text">
+              THUMBLAB
+            </span>
+            <span className="hidden sm:inline" style={{ fontSize: 11, color: "var(--text-muted)", background: "var(--bg-input)", padding: "2px 8px", borderRadius: 20, border: "1px solid var(--border-color)" }}>
               AI Thumbnail Studio
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
-              className="btn-secondary px-3 py-1.5 text-xs flex items-center gap-2"
+              className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5"
               onClick={() => setExportDrawerOpen(true)}
             >
               <Package size={12} />
-              Queue ({state.exportQueue.length})
+              <span className="hidden sm:inline">Queue</span> ({state.exportQueue.length})
             </button>
             <button
-              className="btn-secondary px-3 py-1.5 text-xs flex items-center gap-2"
+              className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5"
               onClick={() => setSettingsOpen(!settingsOpen)}
             >
               <Settings size={12} />
-              {settingsOpen ? "Close" : "Branding"}
+              <span className="hidden sm:inline">{settingsOpen ? "Close" : "Branding"}</span>
             </button>
             <button
-              className="btn-primary px-3 py-1.5 text-sm flex items-center gap-2"
+              className="btn-primary px-2 sm:px-3 py-1.5 text-xs sm:text-sm flex items-center gap-1.5"
               onClick={handleFlattenDownloadBoth}
-              style={{ fontWeight: 700, letterSpacing: "0.02em" }}
+              style={{ fontWeight: 700 }}
             >
               <Download size={14} />
-              Flatten & Download {state.showVariantB ? "Both PNGs" : "PNG"}
+              <span className="hidden md:inline">Flatten & Download {state.showVariantB ? "Both PNGs" : "PNG"}</span>
+              <span className="inline md:hidden">Save</span>
             </button>
           </div>
         </header>
 
-        {/* Main layout */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar */}
-          <aside style={{
+        {/* ── Body ── */}
+        <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+
+          {/* ── Desktop Sidebar (md+) ── */}
+          <aside className="hidden md:flex" style={{
             width: 300,
             background: "var(--bg-card)",
             borderRight: "1px solid var(--border-color)",
-            display: "flex",
             flexDirection: "column",
             flexShrink: 0,
             overflow: "hidden",
           }}>
-            {/* Tabs */}
-            <div style={{ display: "flex", padding: "8px 8px 0", gap: 4, borderBottom: "1px solid var(--border-color)", paddingBottom: 8 }}>
-              {TABS.map(tab => (
-                <button
-                  key={tab.id}
-                  className={`tab-btn flex-1 flex items-center justify-center gap-1.5 ${state.sidebarTab === tab.id ? "active" : ""}`}
-                  style={{ fontSize: 12 }}
-                  onClick={() => dispatch({ type: "SET_TAB", tab: tab.id })}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 overflow-hidden flex flex-col p-3">
-              {state.sidebarTab === "ai" && !settingsOpen && (
-                <AITab onImagesGenerated={handleImagesGenerated} />
-              )}
-              {state.sidebarTab === "assets" && !settingsOpen && (
-                <AssetsTab onUseAsset={handleUseAsset} />
-              )}
-              {state.sidebarTab === "templates" && !settingsOpen && (
-                <TemplatesTab
-                  onLoadTemplate={handleLoadTemplate}
-                  onSaveTemplate={(folderId) => handleSaveTemplate(folderId)}
-                />
-              )}
-              {settingsOpen && <SettingsPanel />}
-            </div>
+            {sidebarContent}
           </aside>
 
-          {/* Main Canvas Area */}
-          <main className="flex-1 overflow-y-auto overflow-x-hidden" style={{ background: "var(--bg-main)", padding: 16 }}>
-            {/* Canvas Grid */}
-            <div className={`grid gap-4 ${state.showVariantB ? "grid-cols-2" : "grid-cols-1"}`} style={{ maxWidth: state.showVariantB ? "none" : 800, margin: "0 auto" }}>
+          {/* ── Mobile Panel (< md) ── */}
+          <div className="flex md:hidden flex-col" style={{
+            background: "var(--bg-card)",
+            borderBottom: "1px solid var(--border-color)",
+            flexShrink: 0,
+            overflow: "hidden",
+            maxHeight: mobilePanelOpen ? "65vh" : 0,
+            transition: "max-height 0.3s ease",
+          }}>
+            <div style={{ overflow: "hidden", display: "flex", flexDirection: "column", height: mobilePanelOpen ? "65vh" : 0 }}>
+              {sidebarContent}
+            </div>
+          </div>
+
+          {/* ── Mobile toggle button ── */}
+          <button
+            className="flex md:hidden items-center justify-center gap-2 w-full py-2 text-xs font-semibold"
+            style={{
+              background: "var(--bg-card)",
+              borderBottom: "1px solid var(--border-color)",
+              color: "var(--accent-cyan)",
+              flexShrink: 0,
+              letterSpacing: "0.05em",
+            }}
+            onClick={() => setMobilePanelOpen(o => !o)}
+          >
+            {mobilePanelOpen
+              ? <><ChevronUp size={14} /> Hide Controls</>
+              : <><ChevronDown size={14} /> Show AI Controls</>
+            }
+          </button>
+
+          {/* ── Main Canvas Area ── */}
+          <main className="flex-1 overflow-y-auto overflow-x-hidden" style={{ background: "var(--bg-main)", padding: 12 }}>
+            <div
+              className={`grid gap-4 ${state.showVariantB ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"}`}
+              style={{ maxWidth: state.showVariantB ? "none" : 800, margin: "0 auto" }}
+            >
               {(["A", ...(state.showVariantB ? ["B"] : [])] as CanvasVariant[]).map(variant => {
                 const isActive = activeEditVariant === variant;
                 const canvas = variant === "A" ? state.canvasA : state.canvasB;
@@ -275,18 +316,10 @@ export default function App() {
                         )}
                       </div>
                       <div className="flex gap-1">
-                        <button
-                          className="btn-secondary px-2 py-1 text-xs"
-                          style={{ fontSize: 10 }}
-                          onClick={() => handleAddToQueue(variant)}
-                        >
+                        <button className="btn-secondary px-2 py-1 text-xs" style={{ fontSize: 10 }} onClick={() => handleAddToQueue(variant)}>
                           + Queue
                         </button>
-                        <button
-                          className="btn-primary px-2 py-1 text-xs flex items-center gap-1"
-                          style={{ fontSize: 10 }}
-                          onClick={() => handleDownload(variant)}
-                        >
+                        <button className="btn-primary px-2 py-1 text-xs flex items-center gap-1" style={{ fontSize: 10 }} onClick={() => handleDownload(variant)}>
                           <Download size={10} /> Save PNG
                         </button>
                       </div>
@@ -313,7 +346,6 @@ export default function App() {
                       />
                     </div>
 
-                    {/* Prompt preview */}
                     {canvas.prompt && (
                       <details style={{ fontSize: 10, color: "var(--text-muted)" }}>
                         <summary style={{ cursor: "pointer", color: "var(--text-secondary)", fontSize: 11 }}>Generated Prompt</summary>
@@ -321,7 +353,6 @@ export default function App() {
                       </details>
                     )}
 
-                    {/* Editing toolbar */}
                     {isActive && (
                       <EditingToolbar
                         variant={variant}
@@ -336,39 +367,31 @@ export default function App() {
                       />
                     )}
 
-                    {/* SEO Panel */}
                     <SEOPanel variant={variant} />
                   </div>
                 );
               })}
             </div>
 
-            {/* Bottom download bar */}
+            {/* Bottom export bar */}
             <div style={{
-              marginTop: 20, padding: 16,
+              marginTop: 20, padding: "12px 16px",
               background: "var(--bg-card)",
               border: "1px solid var(--border-color)",
               borderRadius: 12,
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
             }}>
               <div>
                 <p style={{ fontWeight: 700, fontSize: 14 }}>Flatten & Export</p>
                 <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  Exports at {nW}×{nH}px — optimized for YouTube upload (&lt;2MB)
+                  Exports at {nW}×{nH}px — optimized for YouTube upload
                 </p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
-                  onClick={() => setExportDrawerOpen(true)}
-                >
+              <div className="flex gap-2 flex-wrap">
+                <button className="btn-secondary px-3 py-2 text-sm flex items-center gap-2" onClick={() => setExportDrawerOpen(true)}>
                   <Package size={14} /> Bulk Export ({state.exportQueue.length})
                 </button>
-                <button
-                  className="btn-primary px-6 py-2.5 text-sm flex items-center gap-2"
-                  style={{ fontWeight: 700 }}
-                  onClick={handleFlattenDownloadBoth}
-                >
+                <button className="btn-primary px-4 py-2 text-sm flex items-center gap-2" style={{ fontWeight: 700 }} onClick={handleFlattenDownloadBoth}>
                   <Download size={16} />
                   Flatten & Download {state.showVariantB ? "Both PNGs" : "PNG"}
                 </button>
@@ -378,10 +401,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* Bulk Export Drawer */}
       <BulkExportDrawer isOpen={exportDrawerOpen} onClose={() => setExportDrawerOpen(false)} />
 
-      {/* Squint test overlay */}
       {state.squintTest && (
         <div className="squint-overlay" onClick={() => dispatch({ type: "TOGGLE_SQUINT" })}>
           <div style={{ textAlign: "center" }}>
@@ -392,18 +413,7 @@ export default function App() {
                 return canvas.backgroundImage ? (
                   <div key={v} style={{ textAlign: "center" }}>
                     <p style={{ fontSize: 10, color: "var(--accent-cyan)", marginBottom: 6 }}>Variant {v}</p>
-                    <img
-                      src={canvas.backgroundImage}
-                      alt={`Variant ${v}`}
-                      style={{
-                        width: 80,
-                        height: state.aspectRatio === "16:9" ? 45 : 45 * (9/16) * (16/9) * (16/9),
-                        objectFit: "cover",
-                        borderRadius: 4,
-                        filter: "blur(1.5px)",
-                        border: "1px solid var(--border-color)",
-                      }}
-                    />
+                    <img src={canvas.backgroundImage} alt={`Variant ${v}`} style={{ width: 80, objectFit: "cover", borderRadius: 4, filter: "blur(1.5px)", border: "1px solid var(--border-color)" }} />
                   </div>
                 ) : null;
               })}
