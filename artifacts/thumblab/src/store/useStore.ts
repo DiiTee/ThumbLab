@@ -13,7 +13,7 @@ export const initialState: AppState = {
   sidebarTab: "ai",
   activeVariant: "A",
   aspectRatio: "16:9",
-  imageModel: "flux-1.1-pro",
+  imageModel: "dall-e-3",
   scriptText: "",
   showVariantB: true,
   mobilePreview: false,

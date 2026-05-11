@@ -65,6 +65,16 @@ async function puterImageToDataURL(
   return canvas.toDataURL("image/jpeg", 0.92);
 }
 
+/** Wraps a promise with a timeout — rejects if it takes longer than ms */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s. Check your Puter account is signed in and has credits.`)), ms)
+    ),
+  ]);
+}
+
 function extractText(response: any): string {
   if (typeof response === "string") return response;
   // Puter v2 shape: { message: { content: [{ text: "..." }] } }
@@ -102,12 +112,16 @@ Return ONLY this JSON (no markdown, no preamble):
   "promptB": "detailed image generation prompt for variant B"
 }`;
 
-  const response = await window.puter.ai.chat(
-    [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    { model: "claude-sonnet-4-5" }
+  const response = await withTimeout(
+    window.puter.ai.chat(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      { model: "claude-3-5-sonnet" }
+    ),
+    60000,
+    "Claude prompt generation"
   );
 
   const text = extractText(response);
@@ -124,7 +138,11 @@ export async function generateImage(
   width: number,
   height: number
 ): Promise<string> {
-  const result = await window.puter.ai.txt2img(prompt, { model, width, height });
+  const result = await withTimeout(
+    window.puter.ai.txt2img(prompt, { model }),
+    120000,
+    `Image generation (${model})`
+  );
   return puterImageToDataURL(result, width, height);
 }
 
@@ -154,7 +172,7 @@ Return ONLY valid JSON, no markdown.`,
         },
       ],
     },
-  ], { model: "claude-sonnet-4-5" });
+  ], { model: "claude-3-5-sonnet" });
 
   const text = extractText(response);
   const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -176,14 +194,22 @@ Generate a detailed background scene prompt for a YouTube thumbnail (${aspectRat
 The background should complement the subject/character that will be placed on top.
 Focus on environment, lighting, atmosphere, and colors. 200+ words. Return only the prompt text.`;
 
-  const response = await window.puter.ai.chat(prompt, { model: "claude-sonnet-4-5" });
+  const response = await withTimeout(
+    window.puter.ai.chat(prompt, { model: "claude-3-5-sonnet" }),
+    60000,
+    "Asset prompt generation"
+  );
   return extractText(response);
 }
 
 export async function generateSummaryForSEO(script: string): Promise<string> {
-  const response = await window.puter.ai.chat(
-    `Write a 1-2 sentence description for a YouTube video titled/about: "${script}". Return only the description.`,
-    { model: "claude-sonnet-4-5" }
+  const response = await withTimeout(
+    window.puter.ai.chat(
+      `Write a 1-2 sentence description for a YouTube video titled/about: "${script}". Return only the description.`,
+      { model: "claude-3-5-sonnet" }
+    ),
+    60000,
+    "SEO summary generation"
   );
   return extractText(response);
 }

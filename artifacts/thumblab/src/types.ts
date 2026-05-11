@@ -1,5 +1,5 @@
 export type AspectRatio = "16:9" | "9:16";
-export type ImageModel = "flux-1.1-pro" | "gemini-2.0-flash-exp-image-generation";
+export type ImageModel = "dall-e-3" | "flux-schnell";
 export type SidebarTab = "ai" | "assets" | "templates";
 export type CanvasVariant = "A" | "B";
 export type ObjectRole = "background" | "character" | "prop" | "text" | "shape" | "logo";
@@ -97,8 +97,8 @@ export const ASPECT_RATIOS: Record<AspectRatio, { width: number; height: number;
 };
 
 export const IMAGE_MODELS: Record<ImageModel, string> = {
-  "flux-1.1-pro": "Flux 2 Pro [flux-1.1-pro]",
-  "gemini-2.0-flash-exp-image-generation": "Nano Banana 2 [gemini-2.0-flash]",
+  "dall-e-3": "DALL·E 3 [OpenAI]",
+  "flux-schnell": "FLUX Schnell [fast]",
 };
 
 export const DEFAULT_NEXLEV_TEMPLATE = `Use NexLev MCP to find 3 thumbnail outliers for: {{TOPIC}}.
