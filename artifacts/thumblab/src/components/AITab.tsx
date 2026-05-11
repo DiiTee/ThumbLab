@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Zap, Upload, RefreshCw, Eye, Smartphone, Youtube, SplitSquareVertical, Monitor, Sparkles, ChevronLeft, Image } from "lucide-react";
 import { useStore } from "../store/useStore";
-import { ASPECT_RATIOS, IMAGE_MODELS, PROMPT_MODELS } from "../types";
+import { ASPECT_RATIOS, IMAGE_MODELS, PROMPT_MODELS, SEO_MODELS } from "../types";
 import type { AspectRatio, ImageModel, PromptModel } from "../types";
 import { generatePrompts, generateImage, analyzeReferenceImage } from "../lib/puter";
 import NexLevHelper from "./NexLevHelper";
@@ -175,15 +175,27 @@ export default function AITab({ onImagesGenerated }: Props) {
             ))}
           </select>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", lineHeight: 1.4, padding: "4px 6px", background: "var(--bg-input)", borderRadius: 6, border: "1px solid var(--border-color)" }}>
-            {state.imageModel === "dall-e-3"
-              ? "✦ DALL·E 3 has best text accuracy"
-              : state.imageModel === "gemini-2.0-flash-exp-image-generation"
-              ? "✦ Nano Banana: fast & creative, weaker text"
-              : "✦ FLUX Schnell: very fast, good composition"}
-          </div>
+        <div>
+          <label className="section-label">SEO Model</label>
+          <select
+            value={state.seoModel}
+            onChange={e => dispatch({ type: "SET_SEO_MODEL", model: e.target.value as PromptModel })}
+            className="w-full px-3 py-2 text-sm"
+          >
+            {Object.entries(SEO_MODELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
         </div>
+      </div>
+
+      {/* Image model hint */}
+      <div style={{ fontSize: 10, color: "var(--text-muted)", lineHeight: 1.4, padding: "4px 8px", background: "var(--bg-input)", borderRadius: 6, border: "1px solid var(--border-color)" }}>
+        {state.imageModel === "dall-e-3"
+          ? "✦ DALL·E 3 has best text accuracy for thumbnails"
+          : state.imageModel === "gemini-2.0-flash-exp-image-generation"
+          ? "✦ Nano Banana: fast & creative, weaker text"
+          : "✦ FLUX Schnell: very fast, good composition"}
       </div>
 
       {/* Toggles */}

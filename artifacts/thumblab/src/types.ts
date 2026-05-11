@@ -79,6 +79,7 @@ export interface AppState {
   aspectRatio: AspectRatio;
   imageModel: ImageModel;
   promptModel: PromptModel;
+  seoModel: PromptModel;
   scriptText: string;
   showVariantB: boolean;
   mobilePreview: boolean;
@@ -105,6 +106,11 @@ export const IMAGE_MODELS: Record<ImageModel, string> = {
 };
 
 export const PROMPT_MODELS: Record<PromptModel, string> = {
+  "claude-3-5-sonnet": "Claude 3.5 Sonnet",
+  "gemini-1.5-flash": "Gemini 1.5 Flash [cheap]",
+};
+
+export const SEO_MODELS: Record<PromptModel, string> = {
   "claude-3-5-sonnet": "Claude 3.5 Sonnet",
   "gemini-1.5-flash": "Gemini 1.5 Flash [cheap]",
 };

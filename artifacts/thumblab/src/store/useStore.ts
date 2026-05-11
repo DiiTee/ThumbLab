@@ -15,6 +15,7 @@ export const initialState: AppState = {
   aspectRatio: "16:9",
   imageModel: "dall-e-3",
   promptModel: "claude-3-5-sonnet" as PromptModel,
+  seoModel: "gemini-1.5-flash" as PromptModel,
   scriptText: "",
   showVariantB: true,
   mobilePreview: false,
@@ -35,6 +36,7 @@ export type Action =
   | { type: "SET_ASPECT_RATIO"; ratio: AspectRatio }
   | { type: "SET_IMAGE_MODEL"; model: ImageModel }
   | { type: "SET_PROMPT_MODEL"; model: PromptModel }
+  | { type: "SET_SEO_MODEL"; model: PromptModel }
   | { type: "SET_SCRIPT"; text: string }
   | { type: "TOGGLE_VARIANT_B" }
   | { type: "TOGGLE_MOBILE_PREVIEW" }
@@ -60,6 +62,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_ASPECT_RATIO": return { ...state, aspectRatio: action.ratio };
     case "SET_IMAGE_MODEL": return { ...state, imageModel: action.model };
     case "SET_PROMPT_MODEL": return { ...state, promptModel: action.model };
+    case "SET_SEO_MODEL": return { ...state, seoModel: action.model };
     case "SET_SCRIPT": return { ...state, scriptText: action.text };
     case "TOGGLE_VARIANT_B": return { ...state, showVariantB: !state.showVariantB };
     case "TOGGLE_MOBILE_PREVIEW": return { ...state, mobilePreview: !state.mobilePreview };

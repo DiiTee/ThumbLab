@@ -1,6 +1,8 @@
-import { Check } from "lucide-react";
+import { useState } from "react";
+import { Check, Loader } from "lucide-react";
 import { useStore } from "../store/useStore";
 import type { CanvasVariant } from "../types";
+import { generateSummaryForSEO } from "../lib/puter";
 
 interface Props {
   variant: CanvasVariant;
@@ -10,6 +12,7 @@ export default function SEOPanel({ variant }: Props) {
   const { state, dispatch } = useStore();
   const canvas = variant === "A" ? state.canvasA : state.canvasB;
   const { seoData } = canvas;
+  const [filling, setFilling] = useState(false);
 
   const update = (k: string, v: string) =>
     dispatch({ type: "UPDATE_CANVAS_SEO", variant, seo: { [k]: v } });
@@ -29,6 +32,36 @@ export default function SEOPanel({ variant }: Props) {
     update("videoTitle", state.scriptText.split("\n")[0].slice(0, 100));
   };
 
+  const autoFillWithAI = async () => {
+    if (!state.scriptText || filling) return;
+    if (!window.puter) { alert("Puter.js not loaded"); return; }
+    setFilling(true);
+    try {
+      const prompt = canvas.prompt || state.scriptText;
+      const [summary, tags] = await Promise.all([
+        generateSummaryForSEO(prompt, state.seoModel),
+        generateSummaryForSEO(
+          `Return ONLY a comma-separated list of 8 YouTube SEO tags (no explanation) for a thumbnail about: "${prompt}"`,
+          state.seoModel
+        ),
+      ]);
+      const slug = state.scriptText
+        .trim().toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .split(" ").slice(0, 6).join("-");
+      update("filenameSlug", slug);
+      update("videoTitle", state.scriptText.split("\n")[0].slice(0, 100));
+      update("altText", summary.trim());
+      update("metaTags", tags.replace(/\n/g, "").trim());
+    } catch (err) {
+      alert(`SEO auto-fill failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setFilling(false);
+    }
+  };
+
+  const modelShortName = state.seoModel === "gemini-1.5-flash" ? "Gemini" : "Claude";
+
   return (
     <div className="card p-3 mt-2">
       <div className="flex items-center justify-between mb-3">
@@ -44,9 +77,24 @@ export default function SEOPanel({ variant }: Props) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label style={{ fontSize: 11, color: "var(--text-muted)" }}>Filename Slug</label>
-            <button className="text-xs" style={{ color: "var(--accent-cyan)", background: "none", border: "none", cursor: "pointer" }} onClick={autoFillSlug}>
-              Auto-fill from script
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="text-xs"
+                style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}
+                onClick={autoFillSlug}
+                disabled={filling}
+              >
+                Quick fill
+              </button>
+              <button
+                className="text-xs flex items-center gap-1"
+                style={{ color: "var(--accent-cyan)", background: "none", border: "none", cursor: filling ? "wait" : "pointer", opacity: filling ? 0.6 : 1 }}
+                onClick={autoFillWithAI}
+                disabled={filling}
+              >
+                {filling ? <><Loader size={10} className="animate-spin" /> Filling...</> : <>✦ AI fill ({modelShortName})</>}
+              </button>
+            </div>
           </div>
           <input
             type="text"
