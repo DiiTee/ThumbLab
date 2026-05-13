@@ -3,6 +3,7 @@ import { Check, Loader } from "lucide-react";
 import { useStore } from "../store/useStore";
 import type { CanvasVariant } from "../types";
 import { generateSummaryForSEO } from "../lib/puter";
+import { googleSEOSummary, googleSEOTags } from "../lib/google";
 
 interface Props {
   variant: CanvasVariant;
@@ -21,34 +22,38 @@ export default function SEOPanel({ variant }: Props) {
 
   const autoFillSlug = () => {
     if (!state.scriptText) return;
-    const slug = state.scriptText
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .split(" ")
-      .slice(0, 6)
-      .join("-");
+    const slug = state.scriptText.trim().toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "").split(" ").slice(0, 6).join("-");
     update("filenameSlug", slug);
     update("videoTitle", state.scriptText.split("\n")[0].slice(0, 100));
   };
 
   const autoFillWithAI = async () => {
     if (!state.scriptText || filling) return;
-    if (!window.puter) { alert("Puter.js not loaded"); return; }
+    if (state.engineSeo === "puter" && !window.puter) { alert("Puter.js not loaded"); return; }
     setFilling(true);
     try {
       const prompt = canvas.prompt || state.scriptText;
-      const [summary, tags] = await Promise.all([
-        generateSummaryForSEO(prompt, state.seoModel),
-        generateSummaryForSEO(
-          `Return ONLY a comma-separated list of 8 YouTube SEO tags (no explanation) for a thumbnail about: "${prompt}"`,
-          state.seoModel
-        ),
-      ]);
-      const slug = state.scriptText
-        .trim().toLowerCase()
-        .replace(/[^a-z0-9\s]/g, "")
-        .split(" ").slice(0, 6).join("-");
+      const googleKey = localStorage.getItem("thumblab_google_key") || "";
+      let summary: string, tags: string;
+
+      if (state.engineSeo === "google") {
+        [summary, tags] = await Promise.all([
+          googleSEOSummary(prompt, state.seoModel, googleKey),
+          googleSEOTags(prompt, state.seoModel, googleKey),
+        ]);
+      } else {
+        [summary, tags] = await Promise.all([
+          generateSummaryForSEO(prompt, state.seoModel),
+          generateSummaryForSEO(
+            `Return ONLY a comma-separated list of 8 YouTube SEO tags (no explanation) for a thumbnail about: "${prompt}"`,
+            state.seoModel
+          ),
+        ]);
+      }
+
+      const slug = state.scriptText.trim().toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "").split(" ").slice(0, 6).join("-");
       update("filenameSlug", slug);
       update("videoTitle", state.scriptText.split("\n")[0].slice(0, 100));
       update("altText", summary.trim());
@@ -60,17 +65,13 @@ export default function SEOPanel({ variant }: Props) {
     }
   };
 
-  const modelShortName = state.seoModel === "gemini-1.5-flash" ? "Gemini" : "Claude";
+  const engineLabel = state.engineSeo === "google" ? "Google" : "Puter";
 
   return (
     <div className="card p-3 mt-2">
       <div className="flex items-center justify-between mb-3">
         <span className="section-label">SEO & Metadata — Variant {variant}</span>
-        {allFilled && (
-          <span className="seo-badge">
-            <Check size={10} /> SEO Ready
-          </span>
-        )}
+        {allFilled && <span className="seo-badge"><Check size={10} /> SEO Ready</span>}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -78,12 +79,7 @@ export default function SEOPanel({ variant }: Props) {
           <div className="flex items-center justify-between mb-1">
             <label style={{ fontSize: 11, color: "var(--text-muted)" }}>Filename Slug</label>
             <div className="flex items-center gap-2">
-              <button
-                className="text-xs"
-                style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}
-                onClick={autoFillSlug}
-                disabled={filling}
-              >
+              <button className="text-xs" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }} onClick={autoFillSlug} disabled={filling}>
                 Quick fill
               </button>
               <button
@@ -92,7 +88,7 @@ export default function SEOPanel({ variant }: Props) {
                 onClick={autoFillWithAI}
                 disabled={filling}
               >
-                {filling ? <><Loader size={10} className="animate-spin" /> Filling...</> : <>✦ AI fill ({modelShortName})</>}
+                {filling ? <><Loader size={10} className="animate-spin" /> Filling...</> : <>✦ AI fill ({engineLabel})</>}
               </button>
             </div>
           </div>
@@ -110,7 +106,7 @@ export default function SEOPanel({ variant }: Props) {
           <textarea
             className="w-full px-2 py-1.5 text-xs resize-none"
             style={{ height: 50, fontSize: 12 }}
-            placeholder="e.g. MimiKei holding a Solana coin with an explosion in the background"
+            placeholder="e.g. ThumbBro holding a Solana coin with an explosion in the background"
             value={seoData.altText}
             onChange={e => update("altText", e.target.value)}
           />

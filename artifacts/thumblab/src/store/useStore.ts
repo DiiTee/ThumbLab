@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, Dispatch } from "react";
 import type {
-  AppState, SidebarTab, CanvasVariant, AspectRatio, ImageModel, PromptModel,
+  AppState, SidebarTab, CanvasVariant, AspectRatio, Engine, ImageQuality,
   BrandSettings, SEOData, ExportQueueItem, CanvasState
 } from "../types";
 import { DEFAULT_BRAND, DEFAULT_SEO, DEFAULT_CANVAS, DEFAULT_NEXLEV_TEMPLATE } from "../types";
@@ -14,8 +14,12 @@ export const initialState: AppState = {
   activeVariant: "A",
   aspectRatio: "16:9",
   imageModel: "dall-e-3",
-  promptModel: "claude-sonnet-4-5" as PromptModel,
-  seoModel: "gemini-2.0-flash" as PromptModel,
+  promptModel: "claude-sonnet-4-5",
+  seoModel: "gemini-2.0-flash",
+  enginePrompt: "puter",
+  engineSeo: "puter",
+  engineImage: "puter",
+  imageQuality: "medium",
   scriptText: "",
   showVariantB: true,
   mobilePreview: false,
@@ -34,9 +38,13 @@ export type Action =
   | { type: "SET_TAB"; tab: SidebarTab }
   | { type: "SET_ACTIVE_VARIANT"; variant: CanvasVariant }
   | { type: "SET_ASPECT_RATIO"; ratio: AspectRatio }
-  | { type: "SET_IMAGE_MODEL"; model: ImageModel }
-  | { type: "SET_PROMPT_MODEL"; model: PromptModel }
-  | { type: "SET_SEO_MODEL"; model: PromptModel }
+  | { type: "SET_IMAGE_MODEL"; model: string }
+  | { type: "SET_PROMPT_MODEL"; model: string }
+  | { type: "SET_SEO_MODEL"; model: string }
+  | { type: "SET_ENGINE_PROMPT"; engine: Engine }
+  | { type: "SET_ENGINE_SEO"; engine: Engine }
+  | { type: "SET_ENGINE_IMAGE"; engine: Engine }
+  | { type: "SET_IMAGE_QUALITY"; quality: ImageQuality }
   | { type: "SET_SCRIPT"; text: string }
   | { type: "TOGGLE_VARIANT_B" }
   | { type: "TOGGLE_MOBILE_PREVIEW" }
@@ -63,6 +71,10 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_IMAGE_MODEL": return { ...state, imageModel: action.model };
     case "SET_PROMPT_MODEL": return { ...state, promptModel: action.model };
     case "SET_SEO_MODEL": return { ...state, seoModel: action.model };
+    case "SET_ENGINE_PROMPT": return { ...state, enginePrompt: action.engine };
+    case "SET_ENGINE_SEO": return { ...state, engineSeo: action.engine };
+    case "SET_ENGINE_IMAGE": return { ...state, engineImage: action.engine };
+    case "SET_IMAGE_QUALITY": return { ...state, imageQuality: action.quality };
     case "SET_SCRIPT": return { ...state, scriptText: action.text };
     case "TOGGLE_VARIANT_B": return { ...state, showVariantB: !state.showVariantB };
     case "TOGGLE_MOBILE_PREVIEW": return { ...state, mobilePreview: !state.mobilePreview };
@@ -78,25 +90,16 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, nexlevTemplate: action.template };
     case "SET_CANVAS_IMAGE": {
       const canvas = action.variant === "A" ? "canvasA" : "canvasB";
-      return {
-        ...state,
-        [canvas]: {
-          ...state[canvas],
-          backgroundImage: action.imageUrl,
-          prompt: action.prompt,
-        },
-      };
+      return { ...state, [canvas]: { ...state[canvas as keyof AppState] as CanvasState, backgroundImage: action.imageUrl, prompt: action.prompt } };
     }
     case "SET_CANVAS_JSON": {
       const canvas = action.variant === "A" ? "canvasA" : "canvasB";
-      return { ...state, [canvas]: { ...state[canvas], fabricJson: action.json } };
+      return { ...state, [canvas]: { ...state[canvas as keyof AppState] as CanvasState, fabricJson: action.json } };
     }
     case "UPDATE_CANVAS_SEO": {
       const canvas = action.variant === "A" ? "canvasA" : "canvasB";
-      return {
-        ...state,
-        [canvas]: { ...state[canvas], seoData: { ...state[canvas].seoData, ...action.seo } },
-      };
+      const cur = state[canvas as keyof AppState] as CanvasState;
+      return { ...state, [canvas]: { ...cur, seoData: { ...cur.seoData, ...action.seo } } };
     }
     case "ADD_TO_QUEUE":
       return { ...state, exportQueue: [...state.exportQueue, action.item] };

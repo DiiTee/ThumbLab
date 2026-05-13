@@ -1,0 +1,83 @@
+Modify the app code to have a dual-engine text (prompt) and image generation system.
+Google (API) Engine and Puter Engine.
+
+If engine is 'google' (i.e. Google is selected): 
+This engine is for the following models: 
+gemini-2.5-pro
+gemini-3.1-flash-lite-preview
+gemini-3-flash-preview
+gemini-2.5-flash-lite-preview-09-2025
+gemini-2.5-flash
+gemini-2.5-flash-lite
+gemini-2.5-flash-image (Nano Banana)
+gemini-3.1-flash-image (Nano Banana 2) 
+
+
+OPTION 1:
+Use puter.net.fetch to call the Google AI Studio API (using my GOOGLE_API_KEY).
+
+The above models are to be added to the Prompt Model & SEO Model drop-down lists, if not there already, except for the last 2 models (gemini-2.5-flash-image & gemini-3.1-flash-image) which should be added to the Image Model drop-down list, if not there already.
+
+OPTION 2: 
+Also, Add a Deeplink button:
+The Button: "Generate in Google Playground"
+The Action: It opens: 
+https://aistudio.google.com/app/prompts/new_chat
+
+The Fabric.js Canvas will have a paste listener which will detect multiple images in the clipboard (which I've copied from Google AI studio) and automatically place the first on the VARIANT A canvas and the second on the VARIANT B Canvas.
+
+
+If engine is 'puter' (i.e. Puter is selected): 
+
+Use the current models linked to the Puter on the app if Puter is selected. Also add these (for the Puter engine): 
+For SEO Model:
+gemini-3.1-flash-lite-preview  
+gemini-2.0-flash-lite
+For Prompt Model: 
+gemini-3.1-flash-lite-preview 
+gemini-2.0-flash-lite
+For Image Model (puter.ai.txt2img): gpt-image-2 
+
+gpt-image-2 supports three quality levels: high, medium, and low.
+I want to be able select a quality level, like low quality to reduce compute spend. This can be connected to the Quality Toggle. 
+
+Quality Toggle: 
+Is there a way to include a Quality Toggle:
+ "Low-Res" (low quality, so that it doesn't eat up too much of my Puter/Google API credits/balance) 
+"Medium-Res"
+"High-Res" 
+
+
+Add a simple UI button or a variable at the top that lets me switch between both engines easily. For each Model category. I should be able to use Puter for Prompt and SEO Models, and Google API for Image Model if I want to. I should be able to combine engines basically. 
+
+Add error handling so if the Google API fails, it logs the specific error message to the console. Just like with Puter.
+
+
+Also: 
+
+Add a button for clearing the workspace so I can easily start a new thumbnail project without having to refresh the entire page.
+
+Add a Copy button beside each generated prompt in case I want to copy and paste them elsewhere.
+
+Also, add a Copy Both Prompts I button to copy both prompts at once, they will be combined into one single prompt in this format: 
+
+Generate 2 images using the following prompts:
+
+Image A: (prompt A copied here)
+Image B: (prompt B copied here)
+
+
+The app should also display a small toast message when the combined prompt is copied:
+"Prompt copied! Don't forget to set Aspect Ratio to 16:9 before pasting."
+
+
+Also: 
+In the Canvas: 
+Make the Red Arrow Rotate-able
+I want to be able to customize the colors of: Draw, Text, Circle and Red Arrow 
+
+Also: 
+In the 2 Image Alt-Text boxes for VARIANTS A & B: 
+e.g. MimiKei holding a Solana coin with an explosion in the background
+
+Change MimiKei to ThumbBro

@@ -1,6 +1,11 @@
 export type AspectRatio = "16:9" | "9:16";
-export type ImageModel = "dall-e-3" | "gpt-image-1" | "black-forest-labs/flux-schnell" | "gemini-2.5-flash-image-preview";
-export type PromptModel = "claude-sonnet-4-5" | "claude-haiku-4-5" | "gemini-2.0-flash" | "gemini-2.5-flash";
+export type Engine = "puter" | "google";
+export type ImageQuality = "low" | "medium" | "high";
+
+// Keep as string for flexibility across both engines
+export type ImageModel = string;
+export type PromptModel = string;
+
 export type SidebarTab = "ai" | "assets" | "templates";
 export type CanvasVariant = "A" | "B";
 export type ObjectRole = "background" | "character" | "prop" | "text" | "shape" | "logo";
@@ -80,6 +85,10 @@ export interface AppState {
   imageModel: ImageModel;
   promptModel: PromptModel;
   seoModel: PromptModel;
+  enginePrompt: Engine;
+  engineSeo: Engine;
+  engineImage: Engine;
+  imageQuality: ImageQuality;
   scriptText: string;
   showVariantB: boolean;
   mobilePreview: boolean;
@@ -94,31 +103,48 @@ export interface AppState {
   squintTest: boolean;
 }
 
-export const ASPECT_RATIOS: Record<AspectRatio, { width: number; height: number; label: string }> = {
+export const ASPECT_RATIOS: Record<string, { width: number; height: number; label: string }> = {
   "16:9": { width: 1280, height: 720, label: "16:9 Video [1280×720]" },
   "9:16": { width: 1080, height: 1920, label: "9:16 Shorts [1080×1920]" },
 };
 
-export const IMAGE_MODELS: Record<ImageModel, string> = {
+// ── Puter models ────────────────────────────────────────────────────────────
+export const PUTER_PROMPT_MODELS: Record<string, string> = {
+  "claude-sonnet-4-5": "Claude Sonnet 4.5",
+  "claude-haiku-4-5": "Claude Haiku 4.5 [fast]",
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gemini-2.0-flash": "Gemini 2.0 Flash",
+  "gemini-2.0-flash-lite": "Gemini 2.0 Flash Lite [cheap]",
+  "gemini-3.1-flash-lite-preview": "Gemini 3.1 Flash Lite",
+};
+
+export const PUTER_IMAGE_MODELS: Record<string, string> = {
   "dall-e-3": "DALL·E 3 [best text]",
-  "gpt-image-1": "GPT Image 1 [OpenAI]",
+  "gpt-image-1": "GPT Image 1",
+  "gpt-image-2": "GPT Image 2 ✦ Quality",
   "black-forest-labs/flux-schnell": "FLUX Schnell [fast]",
   "gemini-2.5-flash-image-preview": "Nano Banana [Gemini]",
 };
 
-export const PROMPT_MODELS: Record<PromptModel, string> = {
-  "claude-sonnet-4-5": "Claude Sonnet 4.5",
-  "claude-haiku-4-5": "Claude Haiku 4.5 [fast]",
-  "gemini-2.0-flash": "Gemini 2.0 Flash [cheap]",
+// ── Google API models ────────────────────────────────────────────────────────
+export const GOOGLE_PROMPT_MODELS: Record<string, string> = {
+  "gemini-2.5-pro": "Gemini 2.5 Pro",
   "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite",
+  "gemini-3-flash-preview": "Gemini 3 Flash Preview",
+  "gemini-3.1-flash-lite-preview": "Gemini 3.1 Flash Lite",
+  "gemini-2.5-flash-lite-preview-09-2025": "Gemini 2.5 Flash Lite (Sep)",
 };
 
-export const SEO_MODELS: Record<PromptModel, string> = {
-  "claude-sonnet-4-5": "Claude Sonnet 4.5",
-  "claude-haiku-4-5": "Claude Haiku 4.5 [fast]",
-  "gemini-2.0-flash": "Gemini 2.0 Flash [cheap]",
-  "gemini-2.5-flash": "Gemini 2.5 Flash",
+export const GOOGLE_IMAGE_MODELS: Record<string, string> = {
+  "gemini-2.5-flash-image": "Nano Banana [2.5 Flash]",
+  "gemini-3.1-flash-image": "Nano Banana 2 [3.1 Flash]",
 };
+
+// Legacy aliases kept for old imports
+export const IMAGE_MODELS = PUTER_IMAGE_MODELS;
+export const PROMPT_MODELS = PUTER_PROMPT_MODELS;
+export const SEO_MODELS = PUTER_PROMPT_MODELS;
 
 export const DEFAULT_NEXLEV_TEMPLATE = `Use NexLev MCP to find 3 thumbnail outliers for: {{TOPIC}}.
 Based on their success, provide:

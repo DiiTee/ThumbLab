@@ -173,12 +173,16 @@ export async function generateImage(
   prompt: string,
   model: string,
   width: number,
-  height: number
+  height: number,
+  quality: "low" | "medium" | "high" = "medium"
 ): Promise<string> {
+  const opts: Record<string, any> = { model };
+  // gpt-image-2 supports explicit quality levels
+  if (model === "gpt-image-2") opts.quality = quality;
   const result = await withTimeout(
-    window.puter.ai.txt2img(prompt, { model }),
+    window.puter.ai.txt2img(prompt, opts),
     120000,
-    `Image generation (${model})`
+    `Image generation (${model}${model === "gpt-image-2" ? ` / ${quality}` : ""})`
   );
   return puterImageToDataURL(result, width, height);
 }
