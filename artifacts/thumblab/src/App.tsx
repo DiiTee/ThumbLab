@@ -11,7 +11,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import SEOPanel from "./components/SEOPanel";
 import BulkExportDrawer from "./components/BulkExportDrawer";
 import { saveTemplate, getQueueItems, saveQueueItem } from "./lib/db";
-import { Layers, Settings, Package, Download, FlipHorizontal2, Cpu, FolderOpen, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Layers, Settings, Package, Download, FlipHorizontal2, Cpu, FolderOpen, ChevronDown, ChevronUp, Trash2, Clipboard } from "lucide-react";
 
 const TABS = [
   { id: "ai", label: "AI Studio", icon: <Cpu size={14} /> },
@@ -19,12 +19,33 @@ const TABS = [
   { id: "templates", label: "Templates", icon: <Layers size={14} /> },
 ] as const;
 
+async function readClipboardImage(): Promise<string | null> {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const imageType = item.types.find(t => t.startsWith("image/"));
+      if (imageType) {
+        const blob = await item.getType(imageType);
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target?.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportDrawerOpen, setExportDrawerOpen] = useState(false);
   const [activeEditVariant, setActiveEditVariant] = useState<CanvasVariant>("A");
   const [mobilePanelOpen, setMobilePanelOpen] = useState(true);
+  const [pasting, setPasting] = useState<"both" | CanvasVariant | null>(null);
 
   const canvasARef = useRef<CanvasPanelRef>(null);
   const canvasBRef = useRef<CanvasPanelRef>(null);
@@ -48,7 +69,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [activeEditVariant]);
 
-  // Clipboard paste listener — paste images onto the active canvas
+  // Global keyboard paste listener — paste images onto the active canvas, scaled to aspect ratio
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const items = Array.from(e.clipboardData?.items || []);
@@ -70,6 +91,28 @@ export default function App() {
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
   }, [activeEditVariant]);
+
+  // Paste to one or both canvases via button — reads clipboard and sets as background fitted to aspect ratio
+  const handlePasteToCanvas = useCallback(async (target: CanvasVariant | "both") => {
+    setPasting(target);
+    try {
+      const dataUrl = await readClipboardImage();
+      if (!dataUrl) {
+        alert("No image found in clipboard. Copy an image first, then click Paste.");
+        return;
+      }
+      if (target === "both" || target === "A") {
+        canvasARef.current?.setBackground(dataUrl);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: dataUrl, prompt: "Pasted from clipboard" });
+      }
+      if (target === "both" || target === "B") {
+        canvasBRef.current?.setBackground(dataUrl);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrl, prompt: "Pasted from clipboard" });
+      }
+    } finally {
+      setPasting(null);
+    }
+  }, []);
 
   const handleImagesGenerated = useCallback((imgA: string, promptA: string, imgB: string | null, promptB: string | null) => {
     dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: imgA, prompt: promptA });
@@ -224,6 +267,16 @@ export default function App() {
               <Trash2 size={12} />
               <span className="hidden sm:inline">Clear</span>
             </button>
+            {/* Paste Thumbnails — pastes clipboard image to both canvases at once */}
+            <button
+              className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5"
+              onClick={() => handlePasteToCanvas("both")}
+              disabled={pasting !== null}
+              title="Paste clipboard image to both canvases, scaled to the selected aspect ratio"
+            >
+              <Clipboard size={12} />
+              <span className="hidden sm:inline">{pasting === "both" ? "Pasting…" : "Paste Both"}</span>
+            </button>
             <button className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5" onClick={() => setExportDrawerOpen(true)}>
               <Package size={12} />
               <span className="hidden sm:inline">Queue</span> ({state.exportQueue.length})
@@ -284,6 +337,17 @@ export default function App() {
                         )}
                       </div>
                       <div className="flex gap-1">
+                        {/* Per-canvas paste button */}
+                        <button
+                          className="btn-secondary px-2 py-1 text-xs flex items-center gap-1"
+                          style={{ fontSize: 10 }}
+                          onClick={() => handlePasteToCanvas(variant)}
+                          disabled={pasting !== null}
+                          title={`Paste clipboard image to Variant ${variant}, scaled to the selected aspect ratio`}
+                        >
+                          <Clipboard size={10} />
+                          {pasting === variant ? "…" : "Paste"}
+                        </button>
                         <button className="btn-secondary px-2 py-1 text-xs" style={{ fontSize: 10 }} onClick={() => handleAddToQueue(variant)}>+ Queue</button>
                         <button className="btn-primary px-2 py-1 text-xs flex items-center gap-1" style={{ fontSize: 10 }} onClick={() => handleDownload(variant)}>
                           <Download size={10} /> Save PNG

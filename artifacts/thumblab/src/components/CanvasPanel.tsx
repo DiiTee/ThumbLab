@@ -36,6 +36,19 @@ interface Props {
 
 const HISTORY_LIMIT = 50;
 
+// Shared resize control style applied to every non-background object
+const CONTROL_STYLE = {
+  cornerSize: 10,
+  cornerColor: "#00d4ff",
+  cornerStrokeColor: "#00d4ff",
+  transparentCorners: false,
+  borderColor: "#00d4ff",
+  borderScaleFactor: 1.5,
+  hasControls: true,
+  hasBorders: true,
+  lockUniScaling: false,
+};
+
 const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
   ({ variant, aspectRatio, isActive, mobilePreview, youtubeOverlay, backgroundImage, onActivate, onJsonChange, logoBase64, autoBranding, squintTest }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -158,6 +171,7 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
           fontWeight: "bold",
           textAlign: "center",
           shadow: style === "youtube" ? new fabric.Shadow({ color: "#000", blur: 8, offsetX: 2, offsetY: 2 }) : undefined,
+          ...CONTROL_STYLE,
         });
         (tb as any)["data-role"] = "text";
         canvas.add(tb);
@@ -178,7 +192,7 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
           top: cy - w * 0.02,
           angle: 90,
         });
-        const group = new fabric.Group([line, head], { selectable: true, hasRotatingPoint: true });
+        const group = new fabric.Group([line, head], { selectable: true, hasRotatingPoint: true, ...CONTROL_STYLE });
         (group as any)["data-role"] = "shape";
         canvas.add(group);
         canvas.setActiveObject(group);
@@ -193,6 +207,7 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
           stroke: strokeColor, strokeWidth: 3,
           left: w * 0.4, top: w * 0.2,
           selectable: true,
+          ...CONTROL_STYLE,
         });
         (circle as any)["data-role"] = "shape";
         canvas.add(circle);
@@ -247,6 +262,7 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
         if (!canvas) return;
         fabric.Image.fromURL(imageUrl, (img) => {
           const { w, h } = getDisplaySize();
+          // Cover-fit: scale so the image fills the entire canvas at the selected aspect ratio
           const scale = Math.max(w / (img.width || 1), h / (img.height || 1));
           img.set({ scaleX: scale, scaleY: scale, originX: "left", originY: "top", left: 0, top: 0, selectable: false, evented: false });
           (img as any)["data-role"] = "background";
@@ -270,9 +286,18 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
         if (!canvas) return;
         const { w, h } = getDisplaySize();
         fabric.Image.fromURL(imageUrl, (img) => {
+          // Start at 50% of the canvas width, centered, fully selectable & resizable
           const maxSize = w * 0.5;
           const scale = Math.min(maxSize / (img.width || 1), maxSize / (img.height || 1));
-          img.set({ scaleX: scale, scaleY: scale, left: w * 0.25, top: h * 0.2 });
+          img.set({
+            scaleX: scale,
+            scaleY: scale,
+            left: w * 0.25,
+            top: h * 0.2,
+            selectable: true,
+            evented: true,
+            ...CONTROL_STYLE,
+          });
           (img as any)["data-role"] = role;
           canvas.add(img);
           canvas.setActiveObject(img);

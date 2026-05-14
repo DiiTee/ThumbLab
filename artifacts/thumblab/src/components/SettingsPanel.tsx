@@ -1,14 +1,76 @@
-import { useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { Upload, X, LogIn, LogOut, User } from "lucide-react";
 import { useStore } from "../store/useStore";
 
 const FONTS = ["Impact", "Inter", "Arial Black", "Oswald", "Montserrat", "Bebas Neue", "Roboto Condensed", "Anton"];
+
+declare global {
+  interface Window {
+    puter?: {
+      auth?: {
+        isSignedIn: () => boolean;
+        getUser: () => Promise<{ username: string; email?: string }>;
+        signIn: () => Promise<void>;
+        signOut: () => void;
+      };
+    };
+  }
+}
+
+function usePuterAuth() {
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = async () => {
+    if (!window.puter?.auth) { setSignedIn(null); return; }
+    try {
+      const in_ = window.puter.auth.isSignedIn();
+      setSignedIn(in_);
+      if (in_) {
+        const u = await window.puter.auth.getUser();
+        setUsername(u.username || u.email || "Puter User");
+      } else {
+        setUsername(null);
+      }
+    } catch {
+      setSignedIn(false);
+      setUsername(null);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  const signIn = async () => {
+    if (!window.puter?.auth) return;
+    setLoading(true);
+    try {
+      await window.puter.auth.signIn();
+      await refresh();
+    } catch { /* user cancelled */ } finally {
+      setLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    if (!window.puter?.auth) return;
+    setLoading(true);
+    try {
+      window.puter.auth.signOut();
+      await refresh();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { signedIn, username, loading, signIn, signOut };
+}
 
 export default function SettingsPanel() {
   const { state, dispatch } = useStore();
   const { brandSettings } = state;
   const logoRef = useRef<HTMLInputElement>(null);
-  const [saving, setSaving] = useState(false);
+  const { signedIn, username, loading, signIn, signOut } = usePuterAuth();
 
   const update = (k: string, v: string | boolean | null) =>
     dispatch({ type: "UPDATE_BRAND", settings: { [k]: v } as any });
@@ -23,6 +85,67 @@ export default function SettingsPanel() {
 
   return (
     <div className="flex flex-col gap-4 overflow-y-auto flex-1 pr-1">
+
+      {/* Puter Account */}
+      <div>
+        <span className="section-label">Puter Account</span>
+        <div className="card mt-1 p-3 flex flex-col gap-2">
+          {signedIn === null && (
+            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Puter not available — make sure the page has loaded fully.</p>
+          )}
+          {signedIn === false && (
+            <>
+              <div className="flex items-center gap-2">
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--bg-input)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <User size={14} style={{ color: "var(--text-muted)" }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>Not signed in</p>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)" }}>Sign in to use AI generation</p>
+                </div>
+              </div>
+              <button
+                className="btn-primary w-full py-2 text-xs flex items-center justify-center gap-2"
+                onClick={signIn}
+                disabled={loading}
+              >
+                <LogIn size={12} /> {loading ? "Signing in…" : "Sign in to Puter"}
+              </button>
+            </>
+          )}
+          {signedIn === true && (
+            <>
+              <div className="flex items-center gap-2">
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--gradient)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <User size={14} style={{ color: "#0a0e27" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{username}</p>
+                  <p style={{ fontSize: 10, color: "var(--accent-green)" }}>● Connected</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="btn-secondary flex-1 py-1.5 text-xs flex items-center justify-center gap-1.5"
+                  onClick={async () => { await signOut(); await signIn(); }}
+                  disabled={loading}
+                  title="Sign out and connect a different Puter account"
+                >
+                  <LogIn size={11} /> {loading ? "…" : "Switch Account"}
+                </button>
+                <button
+                  className="btn-danger flex-1 py-1.5 text-xs flex items-center justify-center gap-1.5"
+                  onClick={signOut}
+                  disabled={loading}
+                >
+                  <LogOut size={11} /> {loading ? "…" : "Disconnect"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Brand Colors */}
       <div>
         <span className="section-label">Brand Colors</span>
