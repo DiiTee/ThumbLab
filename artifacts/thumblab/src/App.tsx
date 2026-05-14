@@ -96,18 +96,34 @@ export default function App() {
   const handlePasteToCanvas = useCallback(async (target: CanvasVariant | "both") => {
     setPasting(target);
     try {
-      const dataUrl = await readClipboardImage();
-      if (!dataUrl) {
+      const dataUrlA = await readClipboardImage();
+      if (!dataUrlA) {
         alert("No image found in clipboard. Copy an image first, then click Paste.");
         return;
       }
-      if (target === "both" || target === "A") {
-        canvasARef.current?.setBackground(dataUrl);
-        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: dataUrl, prompt: "Pasted from clipboard" });
-      }
-      if (target === "both" || target === "B") {
-        canvasBRef.current?.setBackground(dataUrl);
-        dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrl, prompt: "Pasted from clipboard" });
+      if (target === "A") {
+        canvasARef.current?.setBackground(dataUrlA);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: dataUrlA, prompt: "Pasted from clipboard" });
+      } else if (target === "B") {
+        canvasBRef.current?.setBackground(dataUrlA);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrlA, prompt: "Pasted from clipboard" });
+      } else {
+        // Paste Both: paste current clipboard to A, then prompt for image B
+        canvasARef.current?.setBackground(dataUrlA);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: dataUrlA, prompt: "Pasted from clipboard" });
+        const proceed = confirm("✓ Image A pasted!\n\nNow copy your second image, then click OK to paste it to Canvas B.");
+        if (proceed) {
+          const dataUrlB = await readClipboardImage();
+          if (dataUrlB && dataUrlB !== dataUrlA) {
+            canvasBRef.current?.setBackground(dataUrlB);
+            dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrlB, prompt: "Pasted from clipboard" });
+          } else if (dataUrlB) {
+            canvasBRef.current?.setBackground(dataUrlB);
+            dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrlB, prompt: "Pasted from clipboard" });
+          } else {
+            alert("No image found in clipboard for Canvas B.");
+          }
+        }
       }
     } finally {
       setPasting(null);

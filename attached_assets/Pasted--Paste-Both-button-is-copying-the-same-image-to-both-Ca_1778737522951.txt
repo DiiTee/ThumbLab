@@ -1,0 +1,115 @@
+"Paste Both" button is copying the same image to both Canvases, instead of the recent 2 (different) images on the clipboard.
+
+
+Add these 3 engines to the image generation aspect of the app: 
+ImagineArt
+SiliconFlow
+Pollinations.ai
+
+
+Imagine Art 
+
+This is the Model option for this engine: 
+flux-schnell
+
+API Call sample (replace prompt and image size/aspect ratio) with app input: 
+
+curl --location --request POST 'https://api.vyro.ai/v2/image/generations' \
+--header 'Authorization: Bearer {{API_TOKEN}}' \
+--form 'prompt="A futuristic cityscape at night with neon lights"' \
+--form 'style="flux-schnell"' \
+--form 'aspect_ratio="1:1"'
+
+
+NOTE: 
+When both Variants (Canvas A & B) are selected:
+
+Implement parallel execution: Do not wait for Image A to finish before starting Image B. In the logic file, replace any sequential loops or single-fetch commands with JavaScript's native Promise.all structure. This must trigger both ImagineArt API network requests simultaneously.
+
+However, if this doesn't work and throttled because I am on a free tier API with likely low concurrency limit, modify the JavaScript to run sequentially instead of using Promise.all. Make it completely finish generating Image A first, hide Spinner A, display Image A, and only then start generating Image B.
+
+
+SiliconFlow 
+
+This is the Model option for this engine: 
+FLUX.1-schnell
+
+Image sizes to be used in URL:
+"576x1024" (9:16)
+"1024x576" (16:9)
+
+API Call sample (replace prompt and image size/aspect ratio) with app input: 
+
+curl --request POST \
+  --url https://api.siliconflow.com/v1/images/generations \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '
+{
+  "model": "black-forest-labs/FLUX.1-schnell",
+  "prompt": "A serene landscape with mountains and a lake at sunset",
+  "image_size": "512x512"
+}
+'
+Random seed for reproducible generation. If not specified, a random seed will be used.
+
+output_format
+enum<string>default:png
+Output format for the generated image.
+Available options: png, jpeg 
+
+Pollinations.ai image generation 
+These are the Model options for this engine: 
+flux (Flux Schnell) 
+zimage (Z-Image Turbo)
+
+Requirements:
+1. Use client-side Fetch requests.
+2. Since this is frontend client code, append the Publishable Key as a URL parameter to prevent CORS header issues. 
+I will provide the Key (just like with the Google API).
+3. Use Promise.all() to trigger both image requests in parallel so they generate at the exact same time without waiting for each other.
+4. Use the official endpoint: pollinations.ai{encoded_prompt}
+5. Accept URL parameters for: &model=flux, &width, &height, and &nologo=true.
+6. Crucial: Ensure Option A and Option B always use completely different random numbers for the '&seed=' parameter so the server doesn't return a cached duplicate image.
+Please configure the Pollinations.ai image generation URL parameters exactly as follows to keep the app inside the 100% free tier and optimize it for A/B testing:
+
+1. Base URL: https://gen.pollinations.ai
+
+Image Generation endpoint: 
+GET /image/{prompt}	JPEG / PNG
+
+For URL: 
+https://gen.pollinations.ai/image/a%20cat%20in%20space
+
+For this HTML App: 
+<img src="https://gen.pollinations.ai/image/a%20cat%20in%20space" />
+
+How to authenticate:
+Authorization header (recommended)
+curl -H "Authorization: Bearer MY_API_KEY" ...
+
+Backup option if Authorization header fails: 
+# Option 2: Query parameter
+curl "https://gen.pollinations.ai/text/hello?key=MY_API_KEY"
+
+2. Model Parameter: 
+Explicitly set '&model=flux' or '&model=zimage' (based on selected option). Never leave this blank, as blank defaults to models that can drain account balances.
+3. Size Parameters: Use specific aspect ratio dimensions based on selected user preference:
+When generating the image URL, use this mapping:
+1. For our 16:9 option (1280x720): Append '&width=1024&height=576' to the Pollinations API URL.
+2. For our 9:16 option (1080x1920): Append '&width=576&height=1024' to the Pollinations API URL.
+Ensure the prompt, model, key, and random seed parameters remain unchanged, and pass these mapped dimensions to the final fetch request.
+Ensure both Option A and Option B utilize the exact same matching size dimensions during a single A/B test run to keep the comparison mathematically consistent, and properly fitted and placed in the Canvas.
+4. No Logo Parameter: Add '&nologo=true' to remove the platform watermark from the generated images.
+5. Seed Parameter (Crucial for A/B Testing): Generate a completely unique, random integer for the '&seed=' parameter for Option A and Option B (e.g., use Math.random() or random.randint() to get a number between 1 and 999999999). This forces the server to generate two distinct images instead of hitting a cached duplicate.
+6. Authentication Parameter: Since our project 'ThumbLab' is a frontend application, append my GitHub publishable key directly to the URL string using '&key=MY_PUBLISHABLE_KEY'.
+
+Please generate the URL building logic following these rules.
+
+API Call Sample: 
+curl 'https://gen.pollinations.ai/image/a beautiful sunset over mountains?model=zimage&width=1024&height=1024&seed=0&enhance=false&negative_prompt=worst%20quality%2C%20blurry&safe=&quality=medium&image=&transparent=false&duration=1&aspectRatio=&audio=false' \
+  --header 'Authorization: Bearer YOUR_SECRET_TOKEN'
+
+
+Add error handling so if any of these API fails, it logs the specific error message to the console. 
+

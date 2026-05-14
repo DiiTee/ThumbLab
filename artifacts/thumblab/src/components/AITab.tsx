@@ -3,11 +3,13 @@ import { Zap, Upload, RefreshCw, Smartphone, Youtube, SplitSquareVertical, Monit
 import { useStore } from "../store/useStore";
 import {
   ASPECT_RATIOS, PUTER_PROMPT_MODELS, PUTER_IMAGE_MODELS,
-  GOOGLE_PROMPT_MODELS, GOOGLE_IMAGE_MODELS
+  GOOGLE_PROMPT_MODELS, GOOGLE_IMAGE_MODELS,
+  IMAGINEART_IMAGE_MODELS, SILICONFLOW_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS
 } from "../types";
 import type { AspectRatio, Engine, ImageQuality } from "../types";
 import { generatePrompts, generateImage, analyzeReferenceImage } from "../lib/puter";
 import { googleGeneratePrompts, googleGenerateImage } from "../lib/google";
+import { imagineArtGenerateImage, siliconFlowGenerateImage, pollinationsGenerateImage } from "../lib/third-party";
 import NexLevHelper from "./NexLevHelper";
 
 interface Props {
@@ -38,6 +40,34 @@ function EngineToggle({ value, onChange }: { value: Engine; onChange: (e: Engine
   );
 }
 
+const IMAGE_ENGINE_OPTIONS: { key: Engine; label: string; color: string; title: string }[] = [
+  { key: "puter",       label: "P",  color: "var(--accent-cyan)", title: "Puter AI" },
+  { key: "google",      label: "G",  color: "#4285f4",            title: "Google AI" },
+  { key: "imagineart",  label: "IA", color: "#ff6b35",            title: "ImagineArt" },
+  { key: "siliconflow", label: "SF", color: "#a855f7",            title: "SiliconFlow" },
+  { key: "pollinations",label: "PL", color: "#00ff88",            title: "Pollinations.ai" },
+];
+
+function ImageEngineToggle({ value, onChange }: { value: Engine; onChange: (e: Engine) => void }) {
+  return (
+    <div className="flex gap-0.5" style={{ background: "var(--bg-input)", borderRadius: 6, padding: 2, border: "1px solid var(--border-color)" }}>
+      {IMAGE_ENGINE_OPTIONS.map(e => (
+        <button key={e.key} onClick={() => onChange(e.key)} title={e.title}
+          style={{
+            fontSize: 8, fontWeight: 700, letterSpacing: "0.04em",
+            padding: "2px 5px", borderRadius: 4, border: "none", cursor: "pointer",
+            background: value === e.key ? e.color : "transparent",
+            color: value === e.key ? (e.key === "pollinations" ? "#0a0e27" : "#fff") : "var(--text-muted)",
+            transition: "all 0.15s",
+          }}
+        >
+          {e.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function AITab({ onImagesGenerated }: Props) {
   const { state, dispatch } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -53,6 +83,9 @@ export default function AITab({ onImagesGenerated }: Props) {
   const [toast, setToast] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("thumblab_google_key") || "");
+  const [imagineArtKey, setImagineArtKey] = useState(() => localStorage.getItem("thumblab_imagineart_key") || "");
+  const [siliconFlowKey, setSiliconFlowKey] = useState(() => localStorage.getItem("thumblab_siliconflow_key") || "");
+  const [pollinationsKey, setPollinationsKey] = useState(() => localStorage.getItem("thumblab_pollinations_key") || "");
 
   const isWorking = step === "generating-prompts" || step === "generating-images";
   const anyGoogleEngine = state.enginePrompt === "google" || state.engineSeo === "google" || state.engineImage === "google";
@@ -69,7 +102,12 @@ export default function AITab({ onImagesGenerated }: Props) {
 
   const promptModels = state.enginePrompt === "google" ? GOOGLE_PROMPT_MODELS : PUTER_PROMPT_MODELS;
   const seoModels = state.engineSeo === "google" ? GOOGLE_PROMPT_MODELS : PUTER_PROMPT_MODELS;
-  const imageModels = state.engineImage === "google" ? GOOGLE_IMAGE_MODELS : PUTER_IMAGE_MODELS;
+  const imageModels =
+    state.engineImage === "google"      ? GOOGLE_IMAGE_MODELS :
+    state.engineImage === "imagineart"  ? IMAGINEART_IMAGE_MODELS :
+    state.engineImage === "siliconflow" ? SILICONFLOW_IMAGE_MODELS :
+    state.engineImage === "pollinations"? POLLINATIONS_IMAGE_MODELS :
+    PUTER_IMAGE_MODELS;
 
   // Ensure selected models are valid for current engine
   const safePromptModel = promptModels[state.promptModel] ? state.promptModel : Object.keys(promptModels)[0];
@@ -113,15 +151,42 @@ export default function AITab({ onImagesGenerated }: Props) {
     dispatch({ type: "SET_GENERATING", value: true });
     try {
       const { width, height } = ASPECT_RATIOS[state.aspectRatio];
-      const genImg = state.engineImage === "google"
-        ? (p: string) => googleGenerateImage(p, safeImageModel, apiKey)
-        : (p: string) => generateImage(p, safeImageModel, width, height, state.imageQuality);
 
-      const [imgA, imgB] = await Promise.all([
-        genImg(editablePromptA),
-        state.showVariantB ? genImg(editablePromptB) : Promise.resolve(null),
-      ]);
-      onImagesGenerated(imgA, editablePromptA, imgB, state.showVariantB ? editablePromptB : null);
+      if (state.engineImage === "imagineart") {
+        // Sequential: finish A first, display it, then generate B (free tier concurrency limit)
+        const imgA = await imagineArtGenerateImage(editablePromptA, safeImageModel, state.aspectRatio, imagineArtKey);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: imgA, prompt: editablePromptA });
+        let imgB: string | null = null;
+        if (state.showVariantB) {
+          imgB = await imagineArtGenerateImage(editablePromptB, safeImageModel, state.aspectRatio, imagineArtKey);
+        }
+        onImagesGenerated(imgA, editablePromptA, imgB, state.showVariantB ? editablePromptB : null);
+      } else if (state.engineImage === "siliconflow") {
+        const [imgA, imgB] = await Promise.all([
+          siliconFlowGenerateImage(editablePromptA, safeImageModel, state.aspectRatio, siliconFlowKey),
+          state.showVariantB ? siliconFlowGenerateImage(editablePromptB, safeImageModel, state.aspectRatio, siliconFlowKey) : Promise.resolve(null),
+        ]);
+        onImagesGenerated(imgA, editablePromptA, imgB, state.showVariantB ? editablePromptB : null);
+      } else if (state.engineImage === "pollinations") {
+        // Always parallel with unique seeds to prevent cached duplicates
+        const seedA = Math.floor(Math.random() * 999999999) + 1;
+        const seedB = Math.floor(Math.random() * 999999999) + 1;
+        const [imgA, imgB] = await Promise.all([
+          pollinationsGenerateImage(editablePromptA, safeImageModel, state.aspectRatio, pollinationsKey, seedA),
+          state.showVariantB ? pollinationsGenerateImage(editablePromptB, safeImageModel, state.aspectRatio, pollinationsKey, seedB) : Promise.resolve(null),
+        ]);
+        onImagesGenerated(imgA, editablePromptA, imgB, state.showVariantB ? editablePromptB : null);
+      } else {
+        const genImg = state.engineImage === "google"
+          ? (p: string) => googleGenerateImage(p, safeImageModel, apiKey)
+          : (p: string) => generateImage(p, safeImageModel, width, height, state.imageQuality);
+        const [imgA, imgB] = await Promise.all([
+          genImg(editablePromptA),
+          state.showVariantB ? genImg(editablePromptB) : Promise.resolve(null),
+        ]);
+        onImagesGenerated(imgA, editablePromptA, imgB, state.showVariantB ? editablePromptB : null);
+      }
+
       setStep("prompts-ready");
     } catch (err) {
       console.error("[THUMBLAB] image gen error:", err);
@@ -222,7 +287,12 @@ export default function AITab({ onImagesGenerated }: Props) {
       {/* ── Engine + Models ── */}
       <div style={{ border: "1px solid var(--border-color)", borderRadius: 8, padding: "10px 10px 8px" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
-          Models &amp; Engines &nbsp;<span style={{ color: "var(--accent-cyan)" }}>P</span>=Puter &nbsp;<span style={{ color: "#4285f4" }}>G</span>=Google API
+          Models &amp; Engines &nbsp;
+          <span style={{ color: "var(--accent-cyan)" }}>P</span>=Puter &nbsp;
+          <span style={{ color: "#4285f4" }}>G</span>=Google &nbsp;
+          <span style={{ color: "#ff6b35" }}>IA</span>=ImagineArt &nbsp;
+          <span style={{ color: "#a855f7" }}>SF</span>=SiliconFlow &nbsp;
+          <span style={{ color: "#00ff88" }}>PL</span>=Pollinations
         </div>
 
         {/* Aspect + Image */}
@@ -236,7 +306,7 @@ export default function AITab({ onImagesGenerated }: Props) {
           <div>
             <div className="flex items-center justify-between mb-0.5">
               <label className="section-label" style={{ marginBottom: 0 }}>Image Model</label>
-              <EngineToggle value={state.engineImage} onChange={e => { dispatch({ type: "SET_ENGINE_IMAGE", engine: e }); }} />
+              <ImageEngineToggle value={state.engineImage} onChange={e => { dispatch({ type: "SET_ENGINE_IMAGE", engine: e }); }} />
             </div>
             <select value={safeImageModel} onChange={e => dispatch({ type: "SET_IMAGE_MODEL", model: e.target.value })} className="w-full px-2 py-1.5 text-xs">
               {Object.entries(imageModels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -311,34 +381,71 @@ export default function AITab({ onImagesGenerated }: Props) {
               </button>
             </div>
             <p style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 3 }}>Stored locally in your browser only</p>
-            {/* Quick links to AI Studio dashboard */}
             <div className="flex gap-1 mt-2">
-              <a
-                href="https://aistudio.google.com/app/u/8/usage?timeRange=last-28-days"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary flex-1 py-1 flex items-center justify-center gap-1"
-                style={{ fontSize: 10, textDecoration: "none" }}
-              >
+              <a href="https://aistudio.google.com/app/u/8/usage?timeRange=last-28-days" target="_blank" rel="noopener noreferrer"
+                className="btn-secondary flex-1 py-1 flex items-center justify-center gap-1" style={{ fontSize: 10, textDecoration: "none" }}>
                 <ExternalLink size={9} /> Usage
               </a>
-              <a
-                href="https://aistudio.google.com/app/u/8/rate-limit?timeRange=last-28-days"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary flex-1 py-1 flex items-center justify-center gap-1"
-                style={{ fontSize: 10, textDecoration: "none" }}
-              >
+              <a href="https://aistudio.google.com/app/u/8/rate-limit?timeRange=last-28-days" target="_blank" rel="noopener noreferrer"
+                className="btn-secondary flex-1 py-1 flex items-center justify-center gap-1" style={{ fontSize: 10, textDecoration: "none" }}>
                 <ExternalLink size={9} /> Rate Limits
               </a>
             </div>
+          </div>
+        )}
+
+        {/* ImagineArt API Key */}
+        {state.engineImage === "imagineart" && (
+          <div className="mt-2">
+            <div className="flex items-center gap-1 mb-1">
+              <Key size={10} style={{ color: "#ff6b35" }} />
+              <label className="section-label" style={{ marginBottom: 0, color: "#ff6b35" }}>ImagineArt API Key</label>
+            </div>
+            <input type="password" value={imagineArtKey}
+              onChange={e => { setImagineArtKey(e.target.value); localStorage.setItem("thumblab_imagineart_key", e.target.value); }}
+              placeholder="vk-..." className="w-full px-2 py-1.5 text-xs font-mono" style={{ fontSize: 11 }} />
+            <p style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 3 }}>Stored locally · Sequential A→B generation (free tier)</p>
+          </div>
+        )}
+
+        {/* SiliconFlow API Key */}
+        {state.engineImage === "siliconflow" && (
+          <div className="mt-2">
+            <div className="flex items-center gap-1 mb-1">
+              <Key size={10} style={{ color: "#a855f7" }} />
+              <label className="section-label" style={{ marginBottom: 0, color: "#a855f7" }}>SiliconFlow API Key</label>
+            </div>
+            <input type="password" value={siliconFlowKey}
+              onChange={e => { setSiliconFlowKey(e.target.value); localStorage.setItem("thumblab_siliconflow_key", e.target.value); }}
+              placeholder="sk-..." className="w-full px-2 py-1.5 text-xs font-mono" style={{ fontSize: 11 }} />
+            <p style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 3 }}>Stored locally in your browser only</p>
+          </div>
+        )}
+
+        {/* Pollinations Publishable Key */}
+        {state.engineImage === "pollinations" && (
+          <div className="mt-2">
+            <div className="flex items-center gap-1 mb-1">
+              <Key size={10} style={{ color: "#00ff88" }} />
+              <label className="section-label" style={{ marginBottom: 0, color: "#00ff88" }}>Pollinations Publishable Key</label>
+            </div>
+            <input type="text" value={pollinationsKey}
+              onChange={e => { setPollinationsKey(e.target.value); localStorage.setItem("thumblab_pollinations_key", e.target.value); }}
+              placeholder="pk-..." className="w-full px-2 py-1.5 text-xs font-mono" style={{ fontSize: 11 }} />
+            <p style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 3 }}>Publishable key — safe for frontend · A &amp; B generated in parallel with unique seeds</p>
           </div>
         )}
       </div>
 
       {/* Image model hint */}
       <div style={{ fontSize: 10, color: "var(--text-muted)", lineHeight: 1.5, padding: "4px 8px", background: "var(--bg-input)", borderRadius: 6, border: "1px solid var(--border-color)" }}>
-        {safeImageModel === "dall-e-3" || safeImageModel === "gpt-image-1" || safeImageModel === "gpt-image-2"
+        {state.engineImage === "imagineart"
+          ? "✦ ImagineArt: Flux Schnell — fast creative generation · sequential A→B for free-tier stability"
+          : state.engineImage === "siliconflow"
+          ? "✦ SiliconFlow: FLUX.1-schnell — high quality, parallel generation"
+          : state.engineImage === "pollinations"
+          ? "✦ Pollinations.ai: parallel A+B with unique seeds — no duplicates guaranteed"
+          : safeImageModel === "dall-e-3" || safeImageModel === "gpt-image-1" || safeImageModel === "gpt-image-2"
           ? "✦ OpenAI models have best text accuracy for thumbnails"
           : safeImageModel.includes("flux") ? "✦ FLUX: very fast, great composition, weaker text"
           : "✦ Nano Banana (Gemini): creative & fast, weaker text accuracy"}

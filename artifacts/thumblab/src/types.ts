@@ -1,5 +1,5 @@
 export type AspectRatio = "16:9" | "9:16";
-export type Engine = "puter" | "google";
+export type Engine = "puter" | "google" | "imagineart" | "siliconflow" | "pollinations";
 export type ImageQuality = "low" | "medium" | "high";
 
 // Keep as string for flexibility across both engines
@@ -139,6 +139,20 @@ export const GOOGLE_PROMPT_MODELS: Record<string, string> = {
 export const GOOGLE_IMAGE_MODELS: Record<string, string> = {
   "gemini-2.5-flash-image": "Nano Banana [2.5 Flash]",
   "gemini-3.1-flash-image": "Nano Banana 2 [3.1 Flash]",
+};
+
+// ── Third-party image models ─────────────────────────────────────────────────
+export const IMAGINEART_IMAGE_MODELS: Record<string, string> = {
+  "flux-schnell": "Flux Schnell",
+};
+
+export const SILICONFLOW_IMAGE_MODELS: Record<string, string> = {
+  "black-forest-labs/FLUX.1-schnell": "FLUX.1-schnell",
+};
+
+export const POLLINATIONS_IMAGE_MODELS: Record<string, string> = {
+  "flux": "Flux (Schnell)",
+  "zimage": "Z-Image Turbo",
 };
 
 // Legacy aliases kept for old imports
