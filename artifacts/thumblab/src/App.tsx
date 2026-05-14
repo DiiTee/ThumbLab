@@ -46,6 +46,7 @@ export default function App() {
   const [activeEditVariant, setActiveEditVariant] = useState<CanvasVariant>("A");
   const [mobilePanelOpen, setMobilePanelOpen] = useState(true);
   const [pasting, setPasting] = useState<"both" | CanvasVariant | null>(null);
+  const [pasteBothStep, setPasteBothStep] = useState<null | "waiting_b">(null);
 
   const canvasARef = useRef<CanvasPanelRef>(null);
   const canvasBRef = useRef<CanvasPanelRef>(null);
@@ -94,40 +95,50 @@ export default function App() {
 
   // Paste to one or both canvases via button — reads clipboard and sets as background fitted to aspect ratio
   const handlePasteToCanvas = useCallback(async (target: CanvasVariant | "both") => {
-    setPasting(target);
+    setPasting(target === "both" ? "A" : target);
     try {
-      const dataUrlA = await readClipboardImage();
-      if (!dataUrlA) {
+      const dataUrl = await readClipboardImage();
+      if (!dataUrl) {
         alert("No image found in clipboard. Copy an image first, then click Paste.");
         return;
       }
-      if (target === "A") {
-        canvasARef.current?.setBackground(dataUrlA);
-        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: dataUrlA, prompt: "Pasted from clipboard" });
-      } else if (target === "B") {
-        canvasBRef.current?.setBackground(dataUrlA);
-        dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrlA, prompt: "Pasted from clipboard" });
+      if (target === "A" || target === "both") {
+        canvasARef.current?.setBackground(dataUrl);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: dataUrl, prompt: "Pasted from clipboard" });
+        if (target === "both") setPasteBothStep("waiting_b");
       } else {
-        // Paste Both: paste current clipboard to A, then prompt for image B
-        canvasARef.current?.setBackground(dataUrlA);
-        dispatch({ type: "SET_CANVAS_IMAGE", variant: "A", imageUrl: dataUrlA, prompt: "Pasted from clipboard" });
-        const proceed = confirm("✓ Image A pasted!\n\nNow copy your second image, then click OK to paste it to Canvas B.");
-        if (proceed) {
-          const dataUrlB = await readClipboardImage();
-          if (dataUrlB && dataUrlB !== dataUrlA) {
-            canvasBRef.current?.setBackground(dataUrlB);
-            dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrlB, prompt: "Pasted from clipboard" });
-          } else if (dataUrlB) {
-            canvasBRef.current?.setBackground(dataUrlB);
-            dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrlB, prompt: "Pasted from clipboard" });
-          } else {
-            alert("No image found in clipboard for Canvas B.");
-          }
-        }
+        canvasBRef.current?.setBackground(dataUrl);
+        dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrl, prompt: "Pasted from clipboard" });
       }
     } finally {
       setPasting(null);
     }
+  }, []);
+
+  // Step 2 of Paste Both — user has copied the second image and clicks this fresh button
+  const handlePasteBothB = useCallback(async () => {
+    setPasting("B");
+    try {
+      const dataUrl = await readClipboardImage();
+      if (!dataUrl) {
+        alert("No image found in clipboard for Canvas B. Make sure you copied it before clicking.");
+        return;
+      }
+      canvasBRef.current?.setBackground(dataUrl);
+      dispatch({ type: "SET_CANVAS_IMAGE", variant: "B", imageUrl: dataUrl, prompt: "Pasted from clipboard" });
+      setPasteBothStep(null);
+    } finally {
+      setPasting(null);
+    }
+  }, []);
+
+  // Clear both canvases (images + edits) without touching the script
+  const handleClearBoth = useCallback(() => {
+    dispatch({ type: "RESET_CANVAS", variant: "A" });
+    dispatch({ type: "RESET_CANVAS", variant: "B" });
+    canvasARef.current?.clearEdits();
+    canvasBRef.current?.clearEdits();
+    setPasteBothStep(null);
   }, []);
 
   const handleImagesGenerated = useCallback((imgA: string, promptA: string, imgB: string | null, promptB: string | null) => {
@@ -286,16 +297,44 @@ export default function App() {
               <Trash2 size={12} />
               <span className="hidden sm:inline">Clear</span>
             </button>
-            {/* Paste Thumbnails — pastes clipboard image to both canvases at once */}
+            {/* Clear Both canvases */}
             <button
               className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5"
-              onClick={() => handlePasteToCanvas("both")}
-              disabled={pasting !== null}
-              title="Paste clipboard image to both canvases, scaled to the selected aspect ratio"
+              onClick={handleClearBoth}
+              title="Clear both canvases"
             >
-              <Clipboard size={12} />
-              <span>{pasting === "both" ? "Pasting…" : "Paste Both"}</span>
+              <Trash2 size={12} />
+              <span>Clear Both</span>
             </button>
+            {/* Paste Both — two-step flow to avoid browser clipboard freeze */}
+            {pasteBothStep === "waiting_b" ? (
+              <div className="flex items-center gap-1">
+                <button
+                  className="btn-primary px-2 py-1.5 text-xs flex items-center gap-1.5 animate-pulse"
+                  onClick={handlePasteBothB}
+                  disabled={pasting !== null}
+                  title="Copy your second image, then click here to paste it to Canvas B"
+                >
+                  <Clipboard size={12} />
+                  <span>{pasting === "B" ? "Pasting…" : "Paste B →"}</span>
+                </button>
+                <button
+                  className="btn-secondary px-1.5 py-1.5 text-xs"
+                  onClick={() => setPasteBothStep(null)}
+                  title="Cancel"
+                >✕</button>
+              </div>
+            ) : (
+              <button
+                className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5"
+                onClick={() => handlePasteToCanvas("both")}
+                disabled={pasting !== null}
+                title="Step 1: paste clipboard image to Canvas A, then paste a second image to Canvas B"
+              >
+                <Clipboard size={12} />
+                <span>{pasting !== null ? "Pasting…" : "Paste Both"}</span>
+              </button>
+            )}
             <button className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5" onClick={() => setExportDrawerOpen(true)}>
               <Package size={12} />
               <span className="hidden sm:inline">Queue</span> ({state.exportQueue.length})
