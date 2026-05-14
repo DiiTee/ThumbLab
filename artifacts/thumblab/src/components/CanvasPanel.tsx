@@ -9,6 +9,7 @@ export interface CanvasPanelRef {
   addCircle: (strokeColor?: string) => void;
   setDrawingMode: (enabled: boolean, color?: string, width?: number) => void;
   clearEdits: () => void;
+  clearAll: () => void;
   undo: () => void;
   redo: () => void;
   deleteSelected: () => void;
@@ -229,6 +230,13 @@ const CanvasPanel = forwardRef<CanvasPanelRef, Props>(
         const bg = canvas.getObjects().filter(o => (o as any)["data-role"] === "background");
         canvas.clear();
         bg.forEach(o => canvas.add(o));
+        canvas.renderAll();
+      },
+      clearAll() {
+        const canvas = fabricRef.current;
+        if (!canvas) return;
+        canvas.clear();
+        canvas.setBackgroundImage("", canvas.renderAll.bind(canvas));
         canvas.renderAll();
       },
       undo() {

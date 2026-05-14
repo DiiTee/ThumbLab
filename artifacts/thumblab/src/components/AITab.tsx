@@ -122,7 +122,7 @@ export default function AITab({ onImagesGenerated }: Props) {
         state.showVariantB ? genImg(editablePromptB) : Promise.resolve(null),
       ]);
       onImagesGenerated(imgA, editablePromptA, imgB, state.showVariantB ? editablePromptB : null);
-      setStep("idle");
+      setStep("prompts-ready");
     } catch (err) {
       console.error("[THUMBLAB] image gen error:", err);
       alert(`Image generation failed: ${err instanceof Error ? err.message : String(err)}`);

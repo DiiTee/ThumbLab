@@ -278,7 +278,7 @@ export default function App() {
               title="Paste clipboard image to both canvases, scaled to the selected aspect ratio"
             >
               <Clipboard size={12} />
-              <span className="hidden sm:inline">{pasting === "both" ? "Pasting…" : "Paste Both"}</span>
+              <span>{pasting === "both" ? "Pasting…" : "Paste Both"}</span>
             </button>
             <button className="btn-secondary px-2 py-1.5 text-xs flex items-center gap-1.5" onClick={() => setExportDrawerOpen(true)}>
               <Package size={12} />
@@ -390,6 +390,7 @@ export default function App() {
                         onAddCircle={(color) => ref.current?.addCircle(color)}
                         onDrawMode={(on, color, width) => ref.current?.setDrawingMode(on, color, width)}
                         onClearEdits={() => ref.current?.clearEdits()}
+                        onClearCanvas={() => { ref.current?.clearAll(); dispatch({ type: "RESET_CANVAS", variant }); }}
                         onUndo={() => ref.current?.undo()}
                         onRedo={() => ref.current?.redo()}
                         onDelete={() => ref.current?.deleteSelected()}

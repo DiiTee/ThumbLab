@@ -7,6 +7,7 @@ interface Props {
   onAddCircle: (color: string) => void;
   onDrawMode: (on: boolean, color: string, width: number) => void;
   onClearEdits: () => void;
+  onClearCanvas: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onDelete: () => void;
@@ -15,7 +16,7 @@ interface Props {
 
 export default function EditingToolbar({
   onAddText, onAddArrow, onAddCircle, onDrawMode,
-  onClearEdits, onUndo, onRedo, onDelete, variant,
+  onClearEdits, onClearCanvas, onUndo, onRedo, onDelete, variant,
 }: Props) {
   const [textInput, setTextInput] = useState("YOUR TEXT HERE");
   const [textColor, setTextColor] = useState("#FFFF00");
@@ -111,6 +112,9 @@ export default function EditingToolbar({
           </div>
           <button className="btn-danger px-2 py-1.5 text-xs" onClick={() => { if (confirm("Clear all canvas edits?")) onClearEdits(); }}>
             Clear All
+          </button>
+          <button className="btn-danger px-2 py-1.5 text-xs" onClick={() => { if (confirm("Clear everything including the thumbnail image?")) onClearCanvas(); }}>
+            Clear Canvas
           </button>
         </div>
 
