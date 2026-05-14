@@ -310,7 +310,7 @@ export default function AITab({ onImagesGenerated }: Props) {
             {/* Quick links to AI Studio dashboard */}
             <div className="flex gap-1 mt-2">
               <a
-                href="https://aistudio.google.com/app/u/8/rate-limit?timeRange=last-28-days"
+                href="https://aistudio.google.com/app/u/8/usage?timeRange=last-28-days"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-secondary flex-1 py-1 flex items-center justify-center gap-1"
