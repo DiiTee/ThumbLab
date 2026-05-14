@@ -132,6 +132,9 @@ export default function App() {
     dispatch({ type: "SET_SCRIPT", text: "" });
     canvasARef.current?.clearEdits();
     canvasBRef.current?.clearEdits();
+    sessionStorage.setItem("tl_step", "idle");
+    sessionStorage.setItem("tl_prompt_a", "");
+    sessionStorage.setItem("tl_prompt_b", "");
   }, []);
 
   const handleSaveTemplate = useCallback(async (folderId: string | null, name?: string) => {

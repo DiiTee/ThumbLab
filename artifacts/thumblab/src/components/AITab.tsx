@@ -43,9 +43,13 @@ export default function AITab({ onImagesGenerated }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const refFileRef = useRef<HTMLInputElement>(null);
 
-  const [step, setStep] = useState<Step>("idle");
-  const [editablePromptA, setEditablePromptA] = useState("");
-  const [editablePromptB, setEditablePromptB] = useState("");
+  const [step, setStepRaw] = useState<Step>(() => (sessionStorage.getItem("tl_step") as Step) || "idle");
+  const [editablePromptA, setEditablePromptARaw] = useState(() => sessionStorage.getItem("tl_prompt_a") || "");
+  const [editablePromptB, setEditablePromptBRaw] = useState(() => sessionStorage.getItem("tl_prompt_b") || "");
+
+  const setStep = (s: Step) => { setStepRaw(s); sessionStorage.setItem("tl_step", s); };
+  const setEditablePromptA = (v: string) => { setEditablePromptARaw(v); sessionStorage.setItem("tl_prompt_a", v); };
+  const setEditablePromptB = (v: string) => { setEditablePromptBRaw(v); sessionStorage.setItem("tl_prompt_b", v); };
   const [toast, setToast] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("thumblab_google_key") || "");
