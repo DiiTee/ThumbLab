@@ -1,5 +1,14 @@
 /** Third-party image generation engines: ImagineArt, SiliconFlow, Pollinations.ai */
 
+function anyToMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object") {
+    const o = err as Record<string, unknown>;
+    return String(o.message || o.error || o.detail || JSON.stringify(err));
+  }
+  return String(err);
+}
+
 async function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -27,8 +36,9 @@ export async function imagineArtGenerateImage(
 
   const formData = new FormData();
   formData.append("prompt", prompt);
-  formData.append("style", model);
+  formData.append("style_id", model);
   formData.append("aspect_ratio", aspectRatio);
+  formData.append("variation", "1");
 
   let resp: Response;
   try {
@@ -39,7 +49,7 @@ export async function imagineArtGenerateImage(
     });
   } catch (err) {
     console.error("[THUMBLAB][ImagineArt] Network error:", err);
-    throw new Error(`ImagineArt network error: ${err instanceof Error ? err.message : String(err)}`);
+    throw new Error(`ImagineArt network error: ${anyToMessage(err)}`);
   }
 
   if (!resp.ok) {
@@ -76,9 +86,12 @@ export async function siliconFlowGenerateImage(
   if (!apiKey) throw new Error("SiliconFlow API key not set. Enter it in the AI panel.");
   const imageSize = SILICONFLOW_SIZES[aspectRatio] || "1024x576";
 
+  // Use puter.net.fetch when available (server-side proxy bypasses CORS)
+  const fetcher: typeof fetch = (window as any).puter?.net?.fetch ?? fetch;
+
   let resp: Response;
   try {
-    resp = await fetch("https://api.siliconflow.com/v1/images/generations", {
+    resp = await fetcher("https://api.siliconflow.com/v1/images/generations", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -88,7 +101,7 @@ export async function siliconFlowGenerateImage(
     });
   } catch (err) {
     console.error("[THUMBLAB][SiliconFlow] Network error:", err);
-    throw new Error(`SiliconFlow network error: ${err instanceof Error ? err.message : String(err)}`);
+    throw new Error(`SiliconFlow network error: ${anyToMessage(err)}`);
   }
 
   if (!resp.ok) {

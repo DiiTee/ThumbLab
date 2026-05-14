@@ -133,7 +133,6 @@ export const GOOGLE_PROMPT_MODELS: Record<string, string> = {
   "gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite (Free)",
   "gemini-3-flash-preview": "Gemini 3 Flash (Free)",
   "gemini-3.1-flash-lite-preview": "Gemini 3.1 Flash Lite (Free)",
-  "gemini-2.5-flash-lite-preview-09-2025": "Gemini 2.5 Flash Lite (Sep)",
 };
 
 export const GOOGLE_IMAGE_MODELS: Record<string, string> = {

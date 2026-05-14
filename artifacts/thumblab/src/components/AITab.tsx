@@ -12,6 +12,15 @@ import { googleGeneratePrompts, googleGenerateImage } from "../lib/google";
 import { imagineArtGenerateImage, siliconFlowGenerateImage, pollinationsGenerateImage } from "../lib/third-party";
 import NexLevHelper from "./NexLevHelper";
 
+function anyErrMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object") {
+    const o = err as Record<string, unknown>;
+    return String(o.message || o.error || o.detail || JSON.stringify(err));
+  }
+  return String(err);
+}
+
 interface Props {
   onImagesGenerated: (imgA: string, promptA: string, imgB: string | null, promptB: string | null) => void;
 }
@@ -137,7 +146,7 @@ export default function AITab({ onImagesGenerated }: Props) {
       setStep("prompts-ready");
     } catch (err) {
       console.error("[THUMBLAB] prompt gen error:", err);
-      alert(`Prompt generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`Prompt generation failed: ${anyErrMsg(err)}`);
       setStep("idle");
     } finally {
       dispatch({ type: "SET_GENERATING", value: false });
@@ -190,7 +199,7 @@ export default function AITab({ onImagesGenerated }: Props) {
       setStep("prompts-ready");
     } catch (err) {
       console.error("[THUMBLAB] image gen error:", err);
-      alert(`Image generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`Image generation failed: ${anyErrMsg(err)}`);
       setStep("prompts-ready");
     } finally {
       dispatch({ type: "SET_GENERATING", value: false });
@@ -222,7 +231,7 @@ export default function AITab({ onImagesGenerated }: Props) {
         onImagesGenerated(img, analysis.backgroundPrompt, null, null);
         setStep("idle");
       } catch (err) {
-        alert(`Recreate failed: ${err instanceof Error ? err.message : String(err)}`);
+        alert(`Recreate failed: ${anyErrMsg(err)}`);
         setStep("idle");
       } finally {
         dispatch({ type: "SET_GENERATING", value: false });
