@@ -8,7 +8,7 @@ import type { Template, TemplateFolder } from "../types";
 
 interface Props {
   onLoadTemplate: (template: Template) => void;
-  onSaveTemplate: (folderId: string | null) => void;
+  onSaveTemplate: (folderId: string | null, name: string) => void;
 }
 
 export default function TemplatesTab({ onLoadTemplate, onSaveTemplate }: Props) {
@@ -68,7 +68,7 @@ export default function TemplatesTab({ onLoadTemplate, onSaveTemplate }: Props) 
 
   const handleSave = async () => {
     if (!saveName.trim()) { alert("Please enter a template name"); return; }
-    onSaveTemplate(saveToFolder || null);
+    onSaveTemplate(saveToFolder || null, saveName.trim());
     setShowSaveDialog(false);
     setSaveName("");
     await reload();

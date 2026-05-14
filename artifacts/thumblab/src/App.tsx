@@ -248,7 +248,7 @@ export default function App() {
         {state.sidebarTab === "ai" && !settingsOpen && <AITab onImagesGenerated={handleImagesGenerated} />}
         {state.sidebarTab === "assets" && !settingsOpen && <AssetsTab onUseAsset={handleUseAsset} />}
         {state.sidebarTab === "templates" && !settingsOpen && (
-          <TemplatesTab onLoadTemplate={handleLoadTemplate} onSaveTemplate={(folderId) => handleSaveTemplate(folderId)} />
+          <TemplatesTab onLoadTemplate={handleLoadTemplate} onSaveTemplate={(folderId, name) => handleSaveTemplate(folderId, name)} />
         )}
         {settingsOpen && <SettingsPanel />}
       </div>
