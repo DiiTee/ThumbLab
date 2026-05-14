@@ -78,17 +78,21 @@ export default function SEOPanel({ variant }: Props) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label style={{ fontSize: 11, color: "var(--text-muted)" }}>Filename Slug</label>
-            <div className="flex items-center gap-2">
-              <button className="text-xs" style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }} onClick={autoFillSlug} disabled={filling}>
-                Quick fill
+            <div className="flex items-center gap-1">
+              <button
+                className="btn-secondary px-2 py-1 text-xs"
+                onClick={autoFillSlug}
+                disabled={filling}
+              >
+                Quick Fill
               </button>
               <button
-                className="text-xs flex items-center gap-1"
-                style={{ color: "var(--accent-cyan)", background: "none", border: "none", cursor: filling ? "wait" : "pointer", opacity: filling ? 0.6 : 1 }}
+                className="btn-secondary px-2 py-1 text-xs flex items-center gap-1"
+                style={{ color: "var(--accent-cyan)", opacity: filling ? 0.6 : 1, cursor: filling ? "wait" : "pointer" }}
                 onClick={autoFillWithAI}
                 disabled={filling}
               >
-                {filling ? <><Loader size={10} className="animate-spin" /> Filling...</> : <>✦ AI fill ({engineLabel})</>}
+                {filling ? <><Loader size={10} className="animate-spin" /> Filling...</> : <>✦ AI Fill ({engineLabel})</>}
               </button>
             </div>
           </div>
