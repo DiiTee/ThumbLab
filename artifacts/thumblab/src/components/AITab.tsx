@@ -454,12 +454,12 @@ export default function AITab({ onImagesGenerated }: Props) {
       {/* Toggles */}
       <div className="grid grid-cols-2 gap-2">
         {[
-          { label: "Variant B", icon: <SplitSquareVertical size={12} />, key: "TOGGLE_VARIANT_B", value: state.showVariantB },
-          { label: "Mobile Preview", icon: <Smartphone size={12} />, key: "TOGGLE_MOBILE_PREVIEW", value: state.mobilePreview },
-          { label: "YouTube Overlay", icon: <Youtube size={12} />, key: "TOGGLE_YOUTUBE_OVERLAY", value: state.youtubeOverlay },
-          { label: "Squint Test", icon: <Monitor size={12} />, key: "TOGGLE_SQUINT", value: state.squintTest },
+          { label: "Variant B", icon: <SplitSquareVertical size={12} />, key: "TOGGLE_VARIANT_B" as const, value: state.showVariantB },
+          { label: "Mobile Preview", icon: <Smartphone size={12} />, key: "TOGGLE_MOBILE_PREVIEW" as const, value: state.mobilePreview },
+          { label: "YouTube Overlay", icon: <Youtube size={12} />, key: "TOGGLE_YOUTUBE_OVERLAY" as const, value: state.youtubeOverlay },
+          { label: "Squint Test", icon: <Monitor size={12} />, key: "TOGGLE_SQUINT" as const, value: state.squintTest },
         ].map(({ label, icon, key, value }) => (
-          <div key={key} className="flex items-center gap-2 cursor-pointer select-none" onClick={() => dispatch({ type: key as any })}>
+          <div key={key} className="flex items-center gap-2 cursor-pointer select-none" onClick={() => dispatch({ type: key })}>
             <div className={`toggle-switch ${value ? "on" : ""}`} />
             <span style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>{icon} {label}</span>
           </div>

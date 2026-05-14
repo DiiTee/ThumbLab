@@ -72,8 +72,11 @@ export default function SettingsPanel() {
   const logoRef = useRef<HTMLInputElement>(null);
   const { signedIn, username, loading, signIn, signOut } = usePuterAuth();
 
-  const update = (k: string, v: string | boolean | null) =>
-    dispatch({ type: "UPDATE_BRAND", settings: { [k]: v } as any });
+  const update = <K extends keyof typeof brandSettings>(k: K, v: (typeof brandSettings)[K]) => {
+    const settings: Partial<typeof brandSettings> = {};
+    settings[k] = v;
+    dispatch({ type: "UPDATE_BRAND", settings });
+  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
