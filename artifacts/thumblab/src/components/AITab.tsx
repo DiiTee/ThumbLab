@@ -307,6 +307,27 @@ export default function AITab({ onImagesGenerated }: Props) {
               </button>
             </div>
             <p style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 3 }}>Stored locally in your browser only</p>
+            {/* Quick links to AI Studio dashboard */}
+            <div className="flex gap-1 mt-2">
+              <a
+                href="https://aistudio.google.com/app/u/8/rate-limit?timeRange=last-28-days"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary flex-1 py-1 flex items-center justify-center gap-1"
+                style={{ fontSize: 10, textDecoration: "none" }}
+              >
+                <ExternalLink size={9} /> Usage
+              </a>
+              <a
+                href="https://aistudio.google.com/app/u/8/rate-limit?timeRange=last-28-days"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary flex-1 py-1 flex items-center justify-center gap-1"
+                style={{ fontSize: 10, textDecoration: "none" }}
+              >
+                <ExternalLink size={9} /> Rate Limits
+              </a>
+            </div>
           </div>
         )}
       </div>
